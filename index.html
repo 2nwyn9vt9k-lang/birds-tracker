@@ -1,0 +1,1742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Birding ID & Trip Tracker</title>
+<!-- Force the phone to hide all browser chrome and run as a standalone app -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+
+<style>
+  :root {
+    --em-900: #064e3b;
+    --em-800: #065f46;
+    --em-700: #047857;
+    --em-600: #059669;
+    --em-100: #d1fae5;
+    --em-50: #ecfdf5;
+    --amb-700: #b45309;
+    --amb-600: #d97706;
+    --amb-100: #fef3c7;
+    --amb-50: #fffbeb;
+    --red-500: #ef4444;
+    --red-50: #fef2f2;
+    --red-200: #fecaca;
+    --violet-600: #7c3aed;
+    --slate-800: #1e293b;
+    --slate-700: #334155;
+    --slate-600: #475569;
+    --slate-500: #64748b;
+    --slate-400: #94a3b8;
+    --slate-200: #e2e8f0;
+    --slate-100: #f1f5f9;
+    --slate-50: #f8fafc;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+      margin: 0;
+      background: var(--slate-100);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--slate-800);
+  }
+
+  .wrap { max-width: 640px; margin: 0 auto; padding: 16px; }
+  .hero{background:linear-gradient(135deg,var(--em-800),var(--em-700),var(--em-600));border-radius:24px;padding:20px;margin-bottom:16px;color:#fff;box-shadow:0 10px 25px -10px rgba(6,78,59,.4);}
+  .hero h1{margin:0;font-size:20px;display:flex;align-items:center;gap:8px;}
+  .hero p{margin:6px 0 0;font-size:12px;color:#d1fae5;}
+  .err{font-size:12px;color:#dc2626;background:var(--red-50);border:1px solid var(--red-200);border-radius:12px;padding:10px;margin-bottom:12px;}
+  .nav{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--slate-200);}
+  .navbtns{display:flex;gap:8px;flex-wrap:wrap;}
+  .navbtn{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;font-size:13px;font-weight:600;border:1px solid var(--slate-200);background:#fff;color:var(--slate-500);cursor:pointer;}
+  .navbtn.active{background:var(--em-700);color:#fff;border-color:var(--em-700);}
+  h2{font-size:17px;margin:0 0 12px;color:var(--slate-800);}
+  h3{font-size:14px;margin:0;color:var(--slate-700);}
+  .row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:8px;}
+  .btn-link{background:none;color:var(--em-700);font-weight:600;font-size:13px;padding:4px 0;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:4px;}
+  .card{background:#fff;border:1px solid var(--slate-200);border-radius:16px;box-shadow:0 1px 2px rgba(0,0,0,.04);}
+
+  /* ===== Read-only detail panel (location header / species detail) =====
+     Replaces the old "form-card" creation-form treatment now that nothing
+     in the app is editable; same comfortable padding/rhythm, no input styling. */
+  .detail-card{padding:16px;margin-bottom:14px;}
+  .detail-card>*{margin-bottom:12px;}
+  .detail-card>*:last-child{margin-bottom:0;}
+
+  .loc-row{display:flex;align-items:center;justify-content:space-between;padding:13px;background:#fff;border:1px solid var(--slate-200);border-radius:14px;cursor:pointer;width:100%;text-align:left;}
+  .loc-row:hover{border-color:var(--em-600);}
+  .loc-left{display:flex;align-items:center;gap:9px;}
+  .loc-badge{background:var(--em-100);color:var(--em-700);border-radius:10px;padding:5px 6px;font-size:13px;}
+  .loc-name{font-size:13px;font-weight:600;color:var(--slate-800);}
+  .loc-date{font-size:11px;color:var(--slate-400);margin-left:6px;}
+  .loc-notes-display{font-size:13px;color:var(--slate-600);line-height:1.5;margin:0;}
+  .count-pill{font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;}
+  .count-empty{background:var(--slate-100);color:var(--slate-400);}
+  .count-done{background:var(--em-600);color:#fff;}
+  .count-prog{background:var(--em-50);color:var(--em-700);}
+  .sp-card{border-radius:16px;padding:14px;border:1px solid var(--slate-200);background:#fff;margin-bottom:11px;}
+  .sp-card.seen{background:var(--em-50);border-color:#6ee7b7;}
+  .sp-inner{display:flex;align-items:flex-start;gap:11px;}
+
+  /* ===== Checkbox + inline photo-thumbnail stack =====
+     The checklist checkbox and its tiny reference-photo thumbnail are stacked
+     in a fixed-width column so the rest of the card's text columns never
+     shift, whether or not a given species has a photo on file. */
+  .chk-stack{flex-shrink:0;width:38px;display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .chk{flex-shrink:0;width:38px;height:38px;border-radius:11px;border:2px solid #cbd5e1;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .chk.on{background:var(--em-600);border-color:var(--em-600);}
+  .chk svg{display:none;}
+  .chk.on svg{display:block;}
+  .chk-thumb{width:38px;height:38px;border-radius:8px;overflow:hidden;flex-shrink:0;}
+  .chk-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+
+  .sp-name-link{background:none;border:none;padding:0;margin:0;font:inherit;font-weight:700;font-size:14.5px;color:var(--slate-800);cursor:pointer;display:flex;align-items:center;gap:3px;text-align:left;min-width:0;}
+  .sp-name-link:hover{color:var(--em-700);}
+  .sp-name-link svg{flex-shrink:0;color:var(--slate-400);}
+  .sp-card.seen .sp-name-link{color:var(--em-800);}
+  .sp-priority{font-size:12px;font-weight:700;color:var(--amb-600);white-space:nowrap;flex-shrink:0;}
+  .pop-note-standalone{display:block;font-size:12px;font-style:italic;color:var(--slate-500);margin:4px 0 0;line-height:1.4;}
+  .seen-else{font-size:11px;color:var(--amb-600);font-weight:600;margin:4px 0 0;}
+  .logged-at{font-size:11px;color:var(--em-600);font-weight:600;margin:6px 0 0;}
+  .idtoggle{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--slate-500);background:none;border:none;cursor:pointer;margin-top:9px;padding:0;}
+  .idnotes{font-size:12px;color:var(--slate-500);margin-top:7px;background:var(--slate-50);border:1px solid #f1f5f9;border-radius:12px;padding:10px;}
+  .idnotes p{margin:0 0 6px;}
+  .idnotes p:last-child{margin-bottom:0;}
+  .idnotes b{color:var(--slate-600);}
+  .idnotes .sim{color:var(--amb-700);}
+  /* Photo inline inside the "ID clues" dropdown — sits directly below the
+     text fields, inside the same bordered/rounded idnotes panel. Omitted
+     entirely (onerror hides the frame) when there is no photo or the file
+     fails to load, matching the chk-thumb omit-if-missing behavior. */
+  .idnotes-photo{margin-top:8px;border-radius:10px;overflow:hidden;aspect-ratio:4/3;border:1px solid var(--slate-200);}
+  .idnotes-photo img{width:100%;height:100%;object-fit:cover;display:block;}
+  .empty-msg{font-size:13px;color:var(--slate-400);font-style:italic;padding:20px 0;text-align:center;}
+  .sp-lib-row{display:flex;align-items:center;justify-content:space-between;padding:11px;background:#fff;border:1px solid var(--slate-200);border-radius:12px;margin-bottom:7px;}
+  .sp-lib-row button.lib-name{flex:1;text-align:left;background:none;border:none;font-size:13px;font-weight:600;color:var(--slate-800);cursor:pointer;}
+  .noid{font-size:11px;color:var(--slate-400);font-style:italic;font-weight:400;margin-left:6px;}
+  .field-label{font-size:11px;font-weight:700;color:var(--em-700);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;}
+  .field-block{margin-bottom:12px;}
+  .field-text{font-size:13px;color:var(--slate-700);line-height:1.5;margin:0;}
+  .back-link{display:flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:var(--slate-500);background:none;border:none;cursor:pointer;margin-bottom:14px;padding:0;}
+  .back-link:hover{color:var(--em-700);}
+  .lib-name-text{display:block;}
+  .lib-loc-text{display:block;font-size:11px;color:var(--slate-400);margin-top:3px;font-weight:400;}
+  .lib-seen-badge{font-size:10px;font-weight:700;color:var(--em-700);background:var(--em-100);border-radius:999px;padding:2px 7px;margin-left:6px;text-transform:uppercase;letter-spacing:.03em;}
+
+  /* ===================== ENDEMIC NAME BADGE ===================== */
+  .sp-endemic-badge{display:inline-block;font-size:11px;font-weight:800;color:#fff;background:var(--violet-600,#7c3aed);border-radius:5px;padding:0 4px;line-height:1.5;margin-left:5px;vertical-align:middle;}
+  .sp-bonus-badge{display:inline-block;font-size:11px;font-weight:800;color:#fff;background:#db2777;border-radius:5px;padding:0 4px;line-height:1.5;margin-left:5px;vertical-align:middle;}
+
+  /* ===================== SPECIES LIBRARY: PRIORITY STARS ===================== */
+  .lib-priority{font-size:12px;font-weight:700;color:var(--amb-600);white-space:nowrap;margin-left:8px;flex-shrink:0;}
+  .lib-name-row{display:flex;align-items:center;justify-content:space-between;gap:6px;}
+  .lib-name-text{flex:1;min-width:0;}
+  .lib-pop-note{display:block;font-size:11.5px;color:var(--slate-500);font-style:italic;margin:4px 0 0;line-height:1.4;}
+
+  /* ===================== STAGE 1 FINAL MOBILE FIXES ===================== */
+
+  /* Force Navigation Buttons to Split 50/50 Full Width across the top */
+  .navbtns {
+      display: flex !important;
+      width: 100% !important;
+      padding: 0 !important;
+      margin: 0 !important;
+  }
+  .navbtn {
+      flex: 1 !important;
+      width: 50% !important;
+      text-align: center !important;
+  }
+
+  /* Style the Isolated Targets Search Bar — the ONLY text input in the app */
+  .targets-search-wrapper {
+      padding: 12px;
+      background: var(--slate-100, #f1f5f9);
+      border-bottom: 1px solid var(--slate-200, #e2e8f0);
+  }
+  #targetsSearch {
+      width: 100% !important;
+      font-size: 16px !important; /* Critical mobile zoom fix */
+      padding: 10px !important;
+      border: 1px solid #cbd5e1 !important;
+      border-radius: 8px !important;
+      box-sizing: border-box !important;
+      font-family: inherit;
+      outline: none;
+  }
+  #targetsSearch:focus{border-color:var(--em-600) !important;box-shadow:0 0 0 2px var(--em-100);}
+
+  /* ===== Global "Hide Already Seen Birds" sticky switch =====
+     Used at the top of both the master Species Library and the per-stop
+     field checklist ("Active Trip" view). Stays pinned to the top of the
+     viewport while the (potentially long) species list scrolls beneath it. */
+  .sticky-filter-bar{
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: var(--slate-100);
+      padding: 10px 14px;
+      margin: 0 -16px 14px;
+      border-bottom: 1px solid var(--slate-200);
+      box-shadow: 0 4px 10px -6px rgba(0,0,0,.12);
+  }
+  .toggle-switch-row{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--slate-700);
+      margin: 0;
+      cursor: pointer;
+  }
+  .toggle-switch{
+      position: relative;
+      display: inline-block;
+      width: 42px;
+      height: 24px;
+      flex-shrink: 0;
+  }
+  .toggle-switch input{
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+  }
+  .toggle-slider{
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #cbd5e1;
+      transition: background-color .18s ease;
+      border-radius: 24px;
+  }
+  .toggle-slider:before{
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background: #fff;
+      transition: transform .18s ease;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  }
+  .toggle-switch input:checked + .toggle-slider{ background: var(--em-600); }
+  .toggle-switch input:checked + .toggle-slider:before{ transform: translateX(18px); }
+
+  /* ===== "Cap at 15 Highest-Value Targets" toggle link =====
+     Sits directly under a location's "Expected Species" header whenever that
+     stop's full target list exceeds 15 entries. */
+  .cap-toggle-link{
+      display: inline-flex;
+      margin: -4px 0 12px;
+      font-size: 12px;
+      text-decoration: underline;
+      text-decoration-color: var(--em-100);
+  }
+
+  /* ===== Offline photo architecture (species detail view) =====
+     Responsive image frame rendered directly below the species name header
+     in the species detail view. Shows the real photo when photoData is
+     populated and loads successfully, otherwise a premium minimalist
+     placeholder (subtle CSS grid + bird silhouette icon) so the layout still
+     looks intentional and balanced. */
+  .sp-photo-frame{
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 14px;
+      border: 1px solid var(--slate-200);
+      position: relative;
+  }
+  .sp-photo-frame.is-empty{
+      background-color: var(--slate-50);
+      background-image:
+        linear-gradient(var(--slate-200) 1px, transparent 1px),
+        linear-gradient(90deg, var(--slate-200) 1px, transparent 1px);
+      background-size: 18px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+  }
+  .sp-photo-img{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+  }
+  .sp-photo-placeholder{
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+  }
+  .sp-photo-placeholder svg{ color: var(--slate-400); }
+  .sp-photo-placeholder span{
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--slate-400);
+  }
+
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script>
+/* ===================== DATA ===================== */
+var SEED_DATA = {
+  trips: {
+    "trip-1": { id: "trip-1", name: "Trip 1 — Spain & Morocco (Nov 2027)",
+      locations: ["loc-barcelonasteppe", "loc-barcelonapyrenees", "loc-embarkationmorning", "loc-valencia", "loc-cartagena", "loc-malaga", "loc-donana", "loc-tangier", "loc-casablanca", "loc-atsea", "loc-sanjuan"] }
+  },
+  locations: {
+    "loc-barcelonasteppe": {
+      id: "loc-barcelonasteppe",
+      tripId: "trip-1",
+      name: "Barcelona Steppe",
+      date: "2027-11-11",
+      notes: "Guide/Self: Local guide strongly recommended for Dupont's Lark — cryptic species on private land; remainder of list viable on the same guided steppe circuit.",
+      speciesIds: ["sp-littlebustard", "sp-dupontslark", "sp-southerngreyshrike", "sp-theklaslark", "sp-blackwheatear", "sp-bonelliseagle", "sp-pintailedsandgrouse", "sp-blackbelliedsandgrouse", "sp-calandralark", "sp-eurasianstonecurlew", "sp-spanishsparrow", "sp-dartfordwarbler", "sp-henharrier", "sp-cornbunting", "sp-woodlark"]
+    },
+    "loc-barcelonapyrenees": {
+      id: "loc-barcelonapyrenees",
+      tripId: "trip-1",
+      name: "Barcelona Pyrenees",
+      date: "2027-11-12",
+      notes: "Guide/Self: Self-guided viable on main Pyrenees roads for most targets. Wallcreeper requires local knowledge of gorge wintering sites; White-backed Woodpecker benefits substantially from the guide's specific site knowledge given how scarce/local it now is under this tier.",
+      speciesIds: ["sp-lammergeier", "sp-wallcreeper", "sp-citrilfinch", "sp-blackwoodpecker", "sp-ptarmigan", "sp-alpineaccentor", "sp-snowfinch", "sp-alpinechough", "sp-eurasianeagleowl", "sp-griffonvulture", "sp-crestedtit", "sp-eurasiantreecreeper", "sp-whitebackedwoodpecker"]
+    },
+    "loc-embarkationmorning": {
+      id: "loc-embarkationmorning",
+      tripId: "trip-1",
+      name: "Embarkation Morning: Llobregat Delta — Remolar-Filipines",
+      date: "2027-11-13",
+      notes: "Guide/Self: Fully self-guided, marked trails and hides.",
+      speciesIds: ["sp-audouinsgull", "sp-southerngreyshrike", "sp-eurasianpendulinetit", "sp-purpleswamphen", "sp-slenderbilledgull", "sp-redcrestedpochard", "sp-europeanserin", "sp-garganey", "sp-blackwingedstilt", "sp-greaterflamingo", "sp-eurasianhoopoe", "sp-beardedreedling", "sp-waterpipit", "sp-waterrail", "sp-commonsnipe"]
+    },
+    "loc-valencia": {
+      id: "loc-valencia",
+      tripId: "trip-1",
+      name: "Valencia, Spain — Albufera Lagoon",
+      date: "2027-11-14",
+      notes: "Guide/Self: Self-guided via eBird trails; boat access for interior lagoon may need a guide.",
+      speciesIds: ["sp-marbledduck", "sp-redknobbedcoot", "sp-audouinsgull", "sp-purpleswamphen", "sp-mediterraneangull", "sp-ferruginousduck", "sp-slenderbilledgull", "sp-eurasianpendulinetit", "sp-moustachedwarbler", "sp-blackneckedgrebe", "sp-greaterflamingo", "sp-beardedreedling", "sp-waterrail", "sp-commonsnipe", "sp-waterpipit"]
+    },
+    "loc-cartagena": {
+      id: "loc-cartagena",
+      tripId: "trip-1",
+      name: "Cartagena, Spain",
+      date: "2027-11-15",
+      notes: "Guide/Self: Waterfront areas fully self-guided.",
+      speciesIds: ["sp-audouinsgull", "sp-trumpeterfinch", "sp-blackwheatear", "sp-theklaslark", "sp-mediterraneangull", "sp-rufoustailedscrubrobin", "sp-sardinianwarbler", "sp-spanishsparrow", "sp-slenderbilledgull", "sp-bluerockthrush", "sp-eurasiancragmartin", "sp-tawnypipit", "sp-greaterflamingo", "sp-blackredstart"]
+    },
+    "loc-malaga": {
+      id: "loc-malaga",
+      tripId: "trip-1",
+      name: "Málaga, Spain — Guadalhorce Estuary / Sierra de Mijas",
+      date: "2027-11-16",
+      notes: "Guide/Self: Self-guided; Guadalhorce River estuary is a world-class accessible eBird hotspot within taxi range of the cruise terminal. Sierra de Mijas foothills viable by taxi for Thekla's. ID note — Thekla's vs. Crested Lark: Thekla's prefers drier, rockier hillsides, with a shorter, more curved bill and finer breast streaking; photo both for review.",
+      speciesIds: ["sp-theklaslark", "sp-iberianmagpie", "sp-audouinsgull", "sp-purpleswamphen", "sp-rufoustailedscrubrobin", "sp-sardinianwarbler", "sp-spanishsparrow", "sp-slenderbilledgull", "sp-eurasianpendulinetit", "sp-eurasianhoopoe", "sp-blackwingedstilt", "sp-greaterflamingo", "sp-crestedlark", "sp-blackredstart", "sp-commonwaxbill"]
+    },
+    "loc-donana": {
+      id: "loc-donana",
+      tripId: "trip-1",
+      name: "Cádiz / Seville, Spain — Doñana Day Trip",
+      date: "2027-11-17",
+      notes: "Guide/Self: Doñana Wings guided tour — required for restricted private park sectors; entire list reachable on the standard guided circuit.",
+      speciesIds: ["sp-spanishimperialeagle", "sp-whiteheadedduck", "sp-marbledduck", "sp-redknobbedcoot", "sp-iberianmagpie", "sp-audouinsgull", "sp-purpleswamphen", "sp-redcrestedpochard", "sp-commoncrane", "sp-blackstork", "sp-eurasianpendulinetit", "sp-blackwingedkite", "sp-squaccoheron", "sp-greaterflamingo", "sp-greaterspottedeagle"]
+    },
+    "loc-tangier": {
+      id: "loc-tangier",
+      tripId: "trip-1",
+      name: "Tangier, Morocco",
+      date: "2027-11-18",
+      notes: "Guide/Self: Local guide required for private hillside scrub access and cryptic species (Tristram's Warbler, Barbary Partridge); waterfront gulls and urban specialists walkable from the port area.",
+      speciesIds: ["sp-africanbluetit", "sp-tristramswarbler", "sp-levaillantswoodpecker", "sp-barbarypartridge", "sp-maghrebwheatear", "sp-moussiersredstart", "sp-audouinsgull", "sp-housebunting", "sp-longleggedbuzzard", "sp-barbaryfalcon", "sp-sardinianwarbler", "sp-slenderbilledgull", "sp-eurasianhoopoe", "sp-commonbulbul", "sp-eurasiancragmartin"]
+    },
+    "loc-casablanca": {
+      id: "loc-casablanca",
+      tripId: "trip-1",
+      name: "Casablanca, Morocco",
+      date: "2027-11-19",
+      notes: "Guide/Self: Waterfront self-guided; municipal parks walkable from cruise port.",
+      speciesIds: ["sp-audouinsgull", "sp-moussiersredstart", "sp-housebunting", "sp-westafricancrestedtern", "sp-slenderbilledgull", "sp-mediterraneangull", "sp-barbaryfalcon", "sp-sardinianwarbler", "sp-commonbulbul", "sp-commonwaxbill", "sp-laughingdove", "sp-eurasianhoopoe", "sp-blackredstart", "sp-crestedlark", "sp-lessercrestedtern"]
+    },
+    "loc-atsea": {
+      id: "loc-atsea",
+      tripId: "trip-1",
+      name: "At Sea — Atlantic Crossing (Nov 20–26, 2027 · Cruise Days 8–14)",
+      date: "2027-11-20",
+      notes: "Guide/Self: Ship observation deck — self-guided. November Crossing Note: Peak migration window for pelagic shearwaters, storm-petrels, and skuas along this Atlantic corridor. Scan dawn/dusk for highest diversity.",
+      speciesIds: ["sp-blackcappedpetrel", "sp-greatshearwater", "sp-capeverdeshearwater", "sp-corysshearwater", "sp-baroloshearwater", "sp-feaspetrel", "sp-madeiranstormpetrel", "sp-whitefacedstormpetrel", "sp-greatskua", "sp-europeanstormpetrel", "sp-bulwerspetrel", "sp-sabinesgull", "sp-pomarineskua", "sp-longtailedskua", "sp-greyphalarope"]
+    },
+    "loc-sanjuan": {
+      id: "loc-sanjuan",
+      tripId: "trip-1",
+      name: "San Juan, Puerto Rico — El Yunque & Río Abajo (Nov 27–28, 2027)",
+      date: "2027-11-27",
+      notes: "Guide/Self: El Yunque National Forest self-guided PM Nov 27 (Yokahú Tower + El Portal boardwalk + roadside PR-191 birding — Big Tree Trail/La Mina Trail/Baño de Oro Trail closed indefinitely since 2024, re-verify closer to travel date). Río Abajo guided half-day AM Nov 28 — same guide as Nov 2025 trip, pre-dawn pickup for an owl attempt.",
+      speciesIds: ["sp-puertoricanwoodpecker", "sp-puertoricanparrot", "sp-puertoricanowl", "sp-puertoricaneuphonia", "sp-puertoricanoriole", "sp-puertoricanvireo", "sp-puertoricanpewee", "sp-puertoricantanager", "sp-puertoricanbroadwingedhawk", "sp-antilleancrestedhummingbird", "sp-greenthroatedcarib", "sp-ruddyquaildove", "sp-yellowfacedgrassquit"]
+    }
+  },
+  species: {
+
+/* ===== Trip 1 species removed during the Jun 2026 4-Factor re-tier pass =====
+   Kept here as an audit note (not as live data) — see
+   Trip_2027_Transatlantic_01_Species_Targets_longlist.md Change Log for full detail.
+   - Western Capercaillie, Black Grouse (Barcelona Pyrenees): NOT VIABLE — lek-display
+     behaviorally season-locked to spring; structurally unreachable on a Nov trip.
+   - Antillean Nighthawk (San Juan): NOT VIABLE — migrates entirely out of Puerto Rico
+     after breeding (~Aug-Oct departure); essentially absent by Nov 27.
+   - Greater Crested (Swift) Tern (Casablanca): TAXONOMY/RANGE CONFLICT — T. bergii has
+     no realistic Atlantic-Morocco range (Indo-Pacific/East Africa species). Replaced by
+     West African Crested Tern (T. albididorsalis, sp-westafricancrestedtern), recently
+     split from Royal Tern, which genuinely occurs on this coast.
+   ===== */
+
+"sp-littlebustard": { id: "sp-littlebustard", priority: "★★★", name: "Little Bustard", endemic: false, tripUnique: true, bonus: false,
+  close: "Male shows black-and-white neck collar and pale eye in breeding-adjacent plumage.",
+  medium: "Stocky, dumpy ground bird with short neck, cryptic sandy-brown back blending into stubble fields.",
+  long: "Bulky shape low in open dry fields; explosive flush reveals bold white wing patches and fast, low wingbeats.",
+  pelagic: "",
+  similar: "Much smaller and slimmer than Great Bustard; told from larks/pipits in the same habitat by sheer bulk.",
+  notes: "Dry cereal steppe and fallow fields; forms loose winter flocks. Explosive low flush reveals males' bold black-and-white wing flash — the best distant giveaway.",
+  photoData: "images/sp-littlebustard.jpg?v=2" },
+
+"sp-dupontslark": { id: "sp-dupontslark", priority: "★★★", name: "Dupont's Lark", endemic: true, tripUnique: true, bonus: false,
+  close: "Long, slightly decurved bill and short crest visible only at close, careful range.",
+  medium: "Pale, long-legged lark that runs rather than flies when disturbed; rarely perches up.",
+  long: "Distinctive descending whistled song at dawn is the most reliable long-range cue on steppe.",
+  pelagic: "",
+  similar: "Easily confused at distance with Calandra or Lesser Short-toed Lark; song and running gait are the giveaways.",
+  notes: "Flat, sparse steppe with scattered low scrub. Runs rather than flying when disturbed and rarely perches up; near-silent in November, so a guide's tape-assisted dawn search is the realistic approach.",
+  photoData: "images/sp-dupontslark.jpg" },
+
+"sp-pintailedsandgrouse": { id: "sp-pintailedsandgrouse", priority: "★★", name: "Pin-tailed Sandgrouse", endemic: false, tripUnique: true, bonus: false,
+  close: "Belly contrastingly white against sandy upperparts; pointed central tail feathers visible on perched birds.",
+  medium: "Compact, pigeon-like shape on bare ground; pale underwing flashes in flight.",
+  long: "Fast, direct flight low over steppe in tight flocks; nasal flight calls carry well.",
+  pelagic: "",
+  similar: "Paler belly and faster, more direct flight separate it from Black-bellied Sandgrouse at range.",
+  notes: "Open arid steppe and cereal plains, often near waterholes at dawn. Explosive flushing flight in tight flocks; pale belly flashes as it banks, with pointed central tail feathers visible on perched birds.",
+  photoData: "images/sp-pintailedsandgrouse.jpg" },
+
+"sp-blackbelliedsandgrouse": { id: "sp-blackbelliedsandgrouse", priority: "★★", name: "Black-bellied Sandgrouse", endemic: false, tripUnique: true, bonus: false,
+  close: "Black belly patch diagnostic when bird is on the ground and not obscured by vegetation.",
+  medium: "Larger and bulkier than Pin-tailed; barred upperparts give a more mottled look.",
+  long: "Heavier, slower-looking flight than Pin-tailed; distinctive bubbling flight call.",
+  pelagic: "",
+  similar: "Larger, darker-bellied, and heavier-flying than Pin-tailed Sandgrouse.",
+  notes: "Same open steppe and cereal-plain habitat as Pin-tailed Sandgrouse, often in mixed groups. Bulkier and darker-bellied in flight — the dark belly patch is the quickest way to separate it from Pin-tailed at distance.",
+  photoData: "images/sp-blackbelliedsandgrouse.jpg" },
+
+"sp-calandralark": { id: "sp-calandralark", priority: "★★", name: "Calandra Lark", endemic: false, tripUnique: true, bonus: false,
+  close: "Bold black neck patches ('necklace') visible on standing birds.",
+  medium: "Large, broad-winged lark; white trailing edge to wing shows in flight.",
+  long: "Heavy, broad-winged silhouette in flight distinguishes it from smaller steppe larks.",
+  pelagic: "",
+  similar: "Larger and broader-winged than Skylark or Short-toed Lark; black neck patches are diagnostic when visible.",
+  notes: "Open steppe, often in loose winter flocks that aid detection. Broad white trailing edge to the wings and dark neck patches are the best in-flight clues.",
+  photoData: "images/sp-calandralark.jpg" },
+
+"sp-bonelliseagle": { id: "sp-bonelliseagle", priority: "★★", name: "Bonelli's Eagle", endemic: false, tripUnique: true, bonus: false,
+  close: "Pale, contrasting white 'braces' on the upper back visible on adults at rest or in good light overhead.",
+  medium: "Slimmer and more angular in flight than Golden Eagle, with a longer tail and narrower wings held flatter.",
+  long: "Broad flat-winged silhouette gliding low along steppe-edge crags is the best long-range cue; pale braces visible even at distance in strong light.",
+  pelagic: "",
+  similar: "Slimmer, longer-tailed, and flatter-winged than Golden Eagle; juvenile Bonelli's lacks Golden Eagle's pale wing patches.",
+  notes: "Rocky gorges and cliff-edged hill country; soars on thermals over open terrain. Pale body contrasts with darker flight feathers and a dark trailing band on the underwing.",
+  photoData: "images/sp-bonelliseagle.jpg" },
+
+"sp-eurasianstonecurlew": { id: "sp-eurasianstonecurlew", priority: "★★", name: "Eurasian Stone-curlew", endemic: false, tripUnique: true, bonus: false,
+  close: "Large staring yellow eye and thick yellow-based bill visible on a bird standing still in the open.",
+  medium: "Stiff-necked, hunched stance on bare stony ground; freezes rather than flying when approached.",
+  long: "Far more often heard than seen — a wailing 'cur-lee' call at dusk over open steppe is the primary detection method.",
+  pelagic: "",
+  similar: "Larger eye and bulkier build separate it from true plovers; crepuscular habits and call are the most reliable cues.",
+  notes: "Open dry or stony ground; crepuscular and easily missed by day — listen for its eerie wailing call at dusk. Cryptic sandy-brown plumage and a large yellow eye; freezes upright when alert rather than flushing.",
+  photoData: "images/sp-eurasianstonecurlew.jpg" },
+
+"sp-henharrier": { id: "sp-henharrier", priority: "★", name: "Hen Harrier", endemic: false, tripUnique: true, bonus: false,
+  close: "Male pale grey overall with black wingtips; female/juvenile show a white rump patch and owl-like facial disc.",
+  medium: "Low, buoyant, tilting flight just above the vegetation, wings held in a shallow V.",
+  long: "White rump patch on females/juveniles and slow low-coursing flight over open steppe are visible at considerable range.",
+  pelagic: "",
+  similar: "Distinct species from the New World Northern Harrier (already on life list); separated from Montagu's Harrier by bulkier build and broader wings.",
+  notes: "Open farmland and steppe edges, hunting in slow, low quartering flight. Males are pale grey with black wingtips; females and juveniles show a bold white rump patch.",
+  photoData: "images/sp-henharrier.jpg" },
+
+"sp-cornbunting": { id: "sp-cornbunting", priority: "★", name: "Corn Bunting", endemic: false, tripUnique: true, bonus: false,
+  close: "Plain, heavily streaked brown plumage with no strong head pattern; stout conical bill.",
+  medium: "Perches openly and persistently on wires, fence posts, and bush-tops over farmland-steppe edge.",
+  long: "Jangling 'bunch of keys' song delivered from an exposed perch is the most reliable long-range cue; dumpy unstreaked-belly silhouette visible at distance.",
+  pelagic: "",
+  similar: "Larger and plainer-faced than other buntings/sparrows in the same habitat; song is diagnostic.",
+  notes: "Open arable farmland and steppe edges; perches conspicuously on wires and fence posts. Bulky and plain streaky-brown with a stout pink bill — bigger and plainer than any similar bunting here.",
+  photoData: "images/sp-cornbunting.jpg" },
+
+"sp-dartfordwarbler": { id: "sp-dartfordwarbler", priority: "★★", name: "Dartford Warbler", endemic: false, tripUnique: true, bonus: false,
+  close: "Dark slate-grey upperparts with rich rufous-pink underparts and a red eye-ring/orbital.",
+  medium: "Skulks low in dense gorse/scrub, frequently flicking its long tail, rarely staying in the open.",
+  long: "Small dark shape diving between low scrub clumps with a scratchy, churring call is the best detection method at range.",
+  pelagic: "",
+  similar: "Darker and more rufous below than Subalpine Warbler; long tail and skulking habit separate it from other scrub warblers.",
+  notes: "Dense low scrub and gorse; skulking and usually staying low in cover. Dark grey-brown above with deep reddish underparts and a long, often-cocked tail.",
+  photoData: "images/sp-dartfordwarbler.jpg" },
+
+"sp-woodlark": { id: "sp-woodlark", priority: "★", name: "Woodlark", endemic: false, tripUnique: true, bonus: false,
+  close: "Short tail and bold pale supercilium meeting over the bill, distinguishing it from other larks.",
+  medium: "Walks on open ground with scattered trees/scrub rather than pure open steppe.",
+  long: "Fluty, melancholic song often given in slow circling flight at dawn/dusk is the most reliable long-range cue.",
+  pelagic: "",
+  similar: "Shorter-tailed and smaller-billed than Skylark; song is quite different — slower and more musical.",
+  notes: "Open ground with scattered trees or heath edges, often feeding on bare patches. Short-tailed silhouette in low, undulating flight; bold pale supercilia meet over the nape, and the buzzy flight call carries well.",
+  photoData: "images/sp-woodlark.jpg" },
+
+"sp-lammergeier": { id: "sp-lammergeier", priority: "★★★", name: "Lammergeier (Bearded Vulture)", endemic: false, tripUnique: true, bonus: false,
+  close: "Rust-orange-washed underparts (from bathing in iron-rich mud) and black 'beard' visible at rest.",
+  medium: "Long, narrow, pointed wings and long diamond-shaped tail distinguish it from other vultures.",
+  long: "Cross-shaped silhouette with long tail soaring along gorge walls and ridgelines; rarely flaps.",
+  pelagic: "",
+  similar: "Tail shape (long, wedge-shaped) and narrower wings separate it from Griffon Vulture at any range.",
+  notes: "High mountain cliffs and gorges; glides for long stretches on narrow, swept-back wings while scanning for bones. Huge wingspan and a diamond-shaped tail are unmistakable even at a distance.",
+  photoData: "images/sp-lammergeier.jpg?v=2" },
+
+"sp-wallcreeper": { id: "sp-wallcreeper", priority: "★★★", name: "Wallcreeper", endemic: false, tripUnique: true, bonus: false,
+  close: "Crimson wing patches and grey body visible when bird pauses on rock face.",
+  medium: "Butterfly-like, flicking flight along cliff faces; constantly fans wings while creeping.",
+  long: "Tiny bird working vertical rock faces in jerky hops — habitat and motion are the best long-range cue.",
+  pelagic: "",
+  similar: "No real confusion species in this habitat; flight and wing-flashing are unmistakable once seen.",
+  notes: "Sheer rock faces and gorge walls; creeps over vertical rock in short flicking hops, wings half-spread like a giant moth. Crimson wing patches flash open on every hop — the giveaway even at range.",
+  photoData: "images/sp-wallcreeper.jpg" },
+
+"sp-ptarmigan": { id: "sp-ptarmigan", priority: "★★", name: "Rock Ptarmigan", endemic: false, tripUnique: true, bonus: false,
+  close: "White wings contrast with mottled grey-brown body in winter transitional plumage.",
+  medium: "Squat, rounded grouse-like shape on rocky alpine ground above treeline.",
+  long: "Cryptic and often only located by explosive flush and white wings flashing against rock/snow.",
+  pelagic: "",
+  similar: "No similar species at this elevation in the Pyrenees; habitat alone is a strong clue.",
+  notes: "Alpine scree and rocky ground above treeline; walks slowly and freezes rather than flushing, easy to walk past. White wings contrasting against a mottled grey-brown winter body are the best clue if it does move.",
+  photoData: "images/sp-ptarmigan.jpg" },
+
+"sp-alpineaccentor": { id: "sp-alpineaccentor", priority: "★★", name: "Alpine Accentor", endemic: false, tripUnique: true, bonus: false,
+  close: "Rufous-streaked flanks and small white throat spots visible on close perched birds.",
+  medium: "Larger and greyer than Dunnock, often tame and feeding on open rocky ground near huts/refuges.",
+  long: "Found around rocky outcrops and alpine huts at altitude; often in small loose groups.",
+  pelagic: "",
+  similar: "Larger, greyer, and bolder than Dunnock, with streaked rufous flanks.",
+  notes: "Rocky alpine slopes, often right around mountain refuges and carparks where it's surprisingly confiding. Streaky brown body with orange-spotted flanks and a finely-spotted grey throat.",
+  photoData: "images/sp-alpineaccentor.jpg" },
+
+"sp-citrilfinch": { id: "sp-citrilfinch", priority: "★★★", name: "Citril Finch", endemic: true, tripUnique: true, bonus: false,
+  close: "Plain greenish-yellow face without strong streaking, unlike Siskin.",
+  medium: "Often in small flocks at treeline edge feeding on ground or in low conifers.",
+  long: "Twittering flight calls from flocks moving along open alpine meadow edges.",
+  pelagic: "",
+  similar: "Greyer head and unstreaked underparts separate it from Siskin and Serin at range.",
+  notes: "Treeline conifer edge and alpine meadows, often in small loose flocks. Plain greenish-yellow overall with no bold markings — told apart mostly by habitat and the absence of streaking other finches show.",
+  photoData: "images/sp-citrilfinch.jpg" },
+
+"sp-snowfinch": { id: "sp-snowfinch", priority: "★★", name: "White-winged Snowfinch", endemic: false, tripUnique: true, bonus: false,
+  close: "Bold white wing patches and tail sides visible on perched or walking birds.",
+  medium: "Walks/runs on ground near snowfields and rocky summits rather than hopping.",
+  long: "Large white wing flashes are obvious even at distance against rock or snow.",
+  pelagic: "",
+  similar: "White wing pattern is unique among high-altitude passerines in this range.",
+  notes: "High alpine slopes and scree near the snow line, often in winter flocks around refuges. Bold white wing patches are obvious the moment it takes flight.",
+  photoData: "images/sp-snowfinch.jpg" },
+
+"sp-griffonvulture": { id: "sp-griffonvulture", priority: "★", name: "Griffon Vulture", endemic: false, tripUnique: true, bonus: false,
+  close: "Pale buff body with darker flight feathers; ruff visible on perched birds.",
+  medium: "Broad, rectangular wings held flat or slightly bowed while soaring in groups over ridgelines.",
+  long: "Large pale soaring shape, often in numbers, riding thermals along gorge edges.",
+  pelagic: "",
+  similar: "Broader wings and shorter tail than Lammergeier; paler overall than Cinereous Vulture.",
+  notes: "Open mountain skies, soaring on thermals over cliffs, often in loose circling groups. Huge and pale-bodied with dark flight feathers and a bare, pale head and neck visible even at distance.",
+  photoData: "images/sp-griffonvulture.jpg" },
+
+"sp-blackwoodpecker": { id: "sp-blackwoodpecker", priority: "★★★", name: "Black Woodpecker", endemic: false, tripUnique: true, bonus: false,
+  close: "Entirely black body with a pale eye and red crown patch (more extensive on male).",
+  medium: "Larger and more crow-like in flight than other European woodpeckers, with deep, slow wingbeats.",
+  long: "Loud, far-carrying ringing call and large all-dark shape in flight across high conifer forest are the best cues at range.",
+  pelagic: "",
+  similar: "Far larger and entirely black compared to Great Spotted or Green Woodpecker; no real confusion species in this habitat.",
+  notes: "Mature mountain conifer forest; loud ringing call and slow, deliberate drumming usually give it away before any sighting. Crow-sized and entirely black, with a red crown (male) or red nape only (female).",
+  photoData: "images/sp-blackwoodpecker.jpg?v=2" },
+
+"sp-whitebackedwoodpecker": { id: "sp-whitebackedwoodpecker", priority: "", name: "White-backed Woodpecker", endemic: false, tripUnique: false, bonus: true,
+  close: "Extensive white barring across the entire back, lacking the solid white shoulder patches of Great Spotted Woodpecker.",
+  medium: "Favors old-growth beech/conifer with dead and decaying wood; larger-billed than Great Spotted.",
+  long: "Loud, slow drumming on dead wood and an all-over barred-back impression are the best long-range cues; locally scarce even within the Pyrenees, better odds in Navarre/Aragón valleys than the Catalan sector specifically.",
+  pelagic: "",
+  similar: "Larger-billed than Great Spotted Woodpecker, with barred (not solid white) back patches.",
+  notes: "Old-growth forest with standing dead wood; scarce and local, so a guide's specific site knowledge matters more than habitat alone. Heavily barred black-and-white back (not plain, like Great Spotted) and an extensively red lower belly are the key marks if found.",
+  photoData: "images/sp-whitebackedwoodpecker.jpg" },
+
+"sp-alpinechough": { id: "sp-alpinechough", priority: "★★", name: "Alpine Chough", endemic: false, tripUnique: true, bonus: false,
+  close: "Yellow bill and red legs distinguish it from Red-billed Chough at close range.",
+  medium: "Often around high mountain refuges/carparks in loose flocks, bold and approachable.",
+  long: "Shallower, more fluttering wingbeats than Red-billed Chough; yellow bill visible in good light even at moderate distance.",
+  pelagic: "",
+  similar: "Yellow (not red) bill separates it from Red-billed Chough; flight is slightly less buoyant.",
+  notes: "High crags, carparks, and mountain refuges, where it's bold and approaches people readily. Yellow bill and red legs on an all-glossy-black body are the quick separators from Red-billed Chough.",
+  photoData: "images/sp-alpinechough.jpg?v=2" },
+
+"sp-eurasianeagleowl": { id: "sp-eurasianeagleowl", priority: "★★", name: "Eurasian Eagle-Owl", endemic: false, tripUnique: true, bonus: false,
+  close: "Massive size, prominent ear-tufts, and bright orange eyes if seen at a daytime roost.",
+  medium: "Huge bulk and broad rounded wings distinguish it from all other owls in this range.",
+  long: "Deep, resonant double 'oo-hu' call carries far across foothill cliffs at dusk — far more likely than a daytime sighting.",
+  pelagic: "",
+  similar: "No real confusion species given its size; call is unmistakable among regional owls.",
+  notes: "Cliffs and rocky gorges; strictly nocturnal, so a resonant, far-carrying call at dusk is the realistic encounter, not a sighting. Massive size and prominent ear-tufts if you do get a look.",
+  photoData: "images/sp-eurasianeagleowl.jpg" },
+
+"sp-crestedtit": { id: "sp-crestedtit", priority: "★", name: "Crested Tit", endemic: false, tripUnique: true, bonus: false,
+  close: "Spiky black-and-white speckled crest visible even in poor light or backlit.",
+  medium: "Forages in mixed flocks through conifer canopy, often with Coal Tit and Goldcrest.",
+  long: "Distinctive purring trill call from within conifer flocks is the best detection method before the crest is visible.",
+  pelagic: "",
+  similar: "Crest separates it instantly from all other regional tits; no real confusion species.",
+  notes: "Conifer forest; active and usually moving through the canopy in small mixed flocks, with a distinctive purring trill. Spiky black-and-white speckled crest is diagnostic at any range.",
+  photoData: "images/sp-crestedtit.jpg" },
+
+"sp-eurasiantreecreeper": { id: "sp-eurasiantreecreeper", priority: "★", name: "Eurasian Treecreeper", endemic: false, tripUnique: true, bonus: false,
+  close: "Whiter underparts and a more contrasting supercilium than Short-toed Treecreeper, best assessed with a clear photo.",
+  medium: "Creeps in a spiral up tree trunks in higher-elevation conifer, replacing Short-toed Treecreeper at altitude.",
+  long: "Thin, high-pitched, whisper-quiet call is the most reliable long-range cue in conifer forest; visually near-identical to Short-toed Treecreeper at range.",
+  pelagic: "",
+  similar: "Very similar to Short-toed Treecreeper (already on life list) — voice and elevation/habitat are the most reliable separators in the field.",
+  notes: "Higher conifer belt specifically — Short-toed Treecreeper takes over at lower elevations here. Spirals up tree trunks then drops to the base of the next one; thin downcurved bill and mottled brown back.",
+  photoData: "images/sp-eurasiantreecreeper.jpg?v=2" },
+
+"sp-blackwingedstilt": { id: "sp-blackwingedstilt", priority: "★", name: "Black-winged Stilt", endemic: false, tripUnique: false, bonus: false,
+  close: "Needle-thin black bill and bright pink-red legs visible on standing birds.",
+  medium: "Extremely long pink legs trailing well beyond tail in flight.",
+  long: "Unmistakable long-legged silhouette wading in open shallows; legs visible at considerable range.",
+  pelagic: "",
+  similar: "No real confusion species given leg length and bill shape.",
+  notes: "Shallow lagoon and marsh edges, wading on absurdly long legs. Needle-thin black bill and bright pink-red legs make it unmistakable even in silhouette. Recurs at Málaga.",
+  photoData: "images/sp-blackwingedstilt.jpg" },
+
+"sp-eurasianpendulinetit": { id: "sp-eurasianpendulinetit", priority: "★★", name: "Eurasian Penduline Tit", endemic: false, tripUnique: false, bonus: false,
+  close: "Chestnut mask through eye and grey crown visible on perched birds in reeds.",
+  medium: "Tiny, active bird working reed heads, often detected before seen.",
+  long: "Thin, descending 'tseeu' contact call from reedbed edges is the best long-range cue.",
+  pelagic: "",
+  similar: "Smaller and more reed-specific than Bearded Reedling; call is the key distinguishing cue.",
+  notes: "Reedbeds; cryptic and usually detected by its thin, nasal call before any sighting. Small and tit-like, with a black face-mask on males. Recurs at several stops across the trip.",
+  photoData: "images/sp-eurasianpendulinetit.jpg" },
+
+"sp-garganey": { id: "sp-garganey", priority: "★", name: "Garganey", endemic: false, tripUnique: true, bonus: false,
+  close: "Male shows bold white supercilium curving down the head.",
+  medium: "Smaller and more compact than other dabbling ducks in mixed rafts.",
+  long: "Pale head stripe on resting male visible at distance among duck rafts.",
+  pelagic: "",
+  similar: "Male separated from Eurasian Teal by bold white head stripe; female trickier, best left to close range.",
+  notes: "Shallow lagoon margins, often tucked into vegetated edges in small groups. Male shows a bold white head-stripe; both sexes have a pale blue-grey forewing visible in flight.",
+  photoData: "images/sp-garganey.jpg" },
+
+"sp-purpleswamphen": { id: "sp-purpleswamphen", priority: "★★", name: "Western (Purple) Swamphen", endemic: false, tripUnique: false, bonus: false,
+  close: "Bright red bill, frontal shield, and red legs contrast with deep blue-purple body.",
+  medium: "Heavy-bodied rail-like bird clambering through reed margins, often flicking white undertail.",
+  long: "Bulky dark shape at reed edge with conspicuous white undertail flash when alarmed.",
+  pelagic: "",
+  similar: "Much larger and bulkier than Eurasian Coot or Common Moorhen, with massive red bill.",
+  notes: "Dense reedbeds and marsh edges; clambers through reeds rather than swimming much in the open. Large all-purple-blue body with a thick red bill, frontal shield, and red legs. Recurs at several stops across the trip.",
+  photoData: "images/sp-purpleswamphen.jpg" },
+
+"sp-audouinsgull": { id: "sp-audouinsgull", priority: "★★★", name: "Audouin's Gull", endemic: true, tripUnique: false, bonus: false,
+  close: "Thick, blunt red bill with dark subterminal band and dark eye.",
+  medium: "Paler grey mantle and more attenuated build than Yellow-legged Gull.",
+  long: "Bill color is visible surprisingly far off on loafing birds and is the most reliable field mark.",
+  pelagic: "",
+  similar: "Yellow-legged Gull has a yellow bill and legs; Audouin's bill is red, legs greyish-dark.",
+  notes: "Coastal lagoons and beaches, resting in loafing flocks with other gulls. Thick, blunt bill — red with a black-and-yellow tip — separates it from other gulls in the group. Recurs at several stops across the trip.",
+  photoData: "images/sp-audouinsgull.jpg" },
+
+"sp-greaterflamingo": { id: "sp-greaterflamingo", priority: "★", name: "Greater Flamingo", endemic: false, tripUnique: false, bonus: false,
+  close: "Pink bill with black tip and pale pink plumage visible up close.",
+  medium: "Long curved neck and stilt-like legs distinctive even when feeding head-down.",
+  long: "Tall, pale pink shape unmistakable on open lagoons from great distance.",
+  pelagic: "",
+  similar: "No confusion species in this region.",
+  notes: "Open lagoons and saltpans, almost always in groups, feeding with the head submerged and swept side-to-side. Huge and pink with a down-curved bill; black flight feathers flash when it takes off. Recurs at several stops across the trip.",
+  photoData: "images/sp-greaterflamingo.jpg" },
+
+"sp-eurasianhoopoe": { id: "sp-eurasianhoopoe", priority: "★", name: "Eurasian Hoopoe", endemic: false, tripUnique: false, bonus: false,
+  close: "Long decurved bill and erectile crest visible when perched.",
+  medium: "Bouncing, butterfly-like flight reveals bold black-and-white banded wings.",
+  long: "Black-and-white wing flashes in undulating flight are visible at range over open ground.",
+  pelagic: "",
+  similar: "Flight pattern and wing banding are unique; no real confusion species.",
+  notes: "Open ground and parkland, probing the soil with its long bill. Undulating, butterfly-like flight shows bold black-and-white barred wings; pinkish-orange body and a tall crest finish the look. Recurs at several stops across the trip.",
+  photoData: "images/sp-eurasianhoopoe.jpg" },
+
+"sp-slenderbilledgull": { id: "sp-slenderbilledgull", priority: "★★", name: "Slender-billed Gull", endemic: false, tripUnique: false, bonus: false,
+  close: "Pale, unmarked head and long thin black bill, often with pink flush on breast.",
+  medium: "Longer-necked, more elongated profile in flight than Black-headed Gull.",
+  long: "Pale, elongated look and longer neck/bill distinguish it from Black-headed Gull at distance.",
+  pelagic: "",
+  similar: "Best told from Black-headed Gull by longer bill/neck and lack of dark head spot.",
+  notes: "Lagoons and saltpans, often feeding alongside other gulls. Long, thin black bill and pale, almost ghostly plumage — look for a faint pink flush on the breast in good light. Recurs at several stops across the trip.",
+  photoData: "images/sp-slenderbilledgull.jpg" },
+
+"sp-beardedreedling": { id: "sp-beardedreedling", priority: "★", name: "Bearded Reedling", endemic: false, tripUnique: false, bonus: false,
+  close: "Male shows grey head with black 'moustache' stripe; long tail visible on perched birds.",
+  medium: "Pinging contact calls from deep within reedbeds, often before any visual.",
+  long: "Pinging call and occasional low flights over reed tops are the best detection method at range.",
+  pelagic: "",
+  similar: "Pinging call separates it from Eurasian Penduline Tit; larger and longer-tailed than most reedbed passerines.",
+  notes: "Dense reedbeds; small flocks move between reed stems with a distinctive metallic 'ping' call, often the first clue. Male shows a grey head with a bold black moustache stripe and a long tail. Recurs at Valencia.",
+  photoData: "images/sp-beardedreedling.jpg" },
+
+"sp-waterpipit": { id: "sp-waterpipit", priority: "★", name: "Water Pipit", endemic: false, tripUnique: false, bonus: false,
+  close: "Plain greyish upperparts and lightly streaked underparts in winter plumage.",
+  medium: "Bobbing walk along marsh edges and ditches, often in pairs or small groups.",
+  long: "Pale, streaky ground bird flushing low with thin 'pseet' call over open marsh edges.",
+  pelagic: "",
+  similar: "Greyer and less heavily streaked than Meadow Pipit; habitat (wet marsh edge) is a useful clue.",
+  notes: "Lagoon margins and wet grassland; walks on open ground and flushes low with a sharp, single call. Plain grey-brown above with clean pale underparts in winter plumage. Recurs at Valencia.",
+  photoData: "images/sp-waterpipit.jpg" },
+
+"sp-waterrail": { id: "sp-waterrail", priority: "★", name: "Water Rail", endemic: false, tripUnique: false, bonus: false,
+  close: "Long red bill and barred flanks visible only on rare close, in-the-open sightings.",
+  medium: "Almost always detected by squealing 'sharming' calls from dense reed/marsh cover rather than seen.",
+  long: "Pig-like squealing call from reedbeds is the primary detection method at any distance.",
+  pelagic: "",
+  similar: "No similar species given the distinctive call and cryptic habits.",
+  notes: "Dense reed and marsh vegetation; extremely skulking, with a pig-like squealing call far more likely than a sighting. Long red bill and barred black-and-white flanks if it's glimpsed at the reed edge. Recurs at Valencia.",
+  photoData: "images/sp-waterrail.jpg" },
+
+"sp-commonsnipe": { id: "sp-commonsnipe", priority: "★", name: "Common Snipe", endemic: false, tripUnique: false, bonus: false,
+  close: "Long straight bill and boldly striped head/back pattern visible if seen at rest.",
+  medium: "Crouches low and well camouflaged at marsh edges, easy to overlook until flushed.",
+  long: "Zig-zag flush flight with sharp 'scaap' call is the most reliable long-range identification cue.",
+  pelagic: "",
+  similar: "Zig-zag flight and call separate it from the rarer Jack Snipe (more direct, silent flight).",
+  notes: "Muddy lagoon margins; cryptic and freezes until flushed, then escapes in a fast zigzag flight. Extremely long straight bill and bold striped head and back pattern. Recurs at Valencia.",
+  photoData: "images/sp-commonsnipe.jpg" },
+
+"sp-europeanserin": { id: "sp-europeanserin", priority: "★", name: "European Serin", endemic: false, tripUnique: true, bonus: false,
+  close: "Small finch with bright yellow forehead/rump and heavily streaked back.",
+  medium: "Often perches high on scrub or wires near reserve edges, singing.",
+  long: "Buzzy, jangling song carries well from scrub fringe and is often the first clue.",
+  pelagic: "",
+  similar: "Smaller and shorter-tailed than Siskin; yellow rump patch is a useful flight cue.",
+  notes: "Scrub fringe and garden edges; a buzzy, jangling song from an exposed perch is the easiest way to find it. Tiny, with a bright yellow rump and breast and a stubby bill.",
+  photoData: "images/sp-europeanserin.jpg" },
+
+"sp-southerngreyshrike": { id: "sp-southerngreyshrike", priority: "★★★", name: "Southern (Iberian) Grey Shrike", endemic: true, tripUnique: false, bonus: false,
+  close: "Black mask, grey crown/back, and white underparts visible on perched birds.",
+  medium: "Hunts from exposed perches such as fence posts and shrub tops over open ground.",
+  long: "Upright posture on prominent perches over open scrub is the best long-range cue.",
+  pelagic: "",
+  similar: "Larger and paler grey than Woodchat Shrike; perched hunting posture is similar across shrikes.",
+  notes: "Open scrub with scattered bushes; reliably perched upright on exposed bush-tops. Black mask and white underparts, sitting boldly in the open, make it easy to pick out at distance. Recurs at Embarkation Morning.",
+  photoData: "images/sp-southerngreyshrike.jpg" },
+
+"sp-redcrestedpochard": { id: "sp-redcrestedpochard", priority: "★★", name: "Red-crested Pochard", endemic: false, tripUnique: false, bonus: false,
+  close: "Male shows bright orange-rufous head and bulbous shape, red bill.",
+  medium: "Bulky duck riding high on the water among mixed rafts.",
+  long: "Bright orange head of male is visible at considerable distance among duck flocks.",
+  pelagic: "",
+  similar: "Male unmistakable; female told from other pochards by pale cheek patch contrasting with dark crown.",
+  notes: "Open lagoons and lakes, floating buoyantly often in small groups. Male's bright orange-red head and red bill are unmistakable at distance; females are plainer but show the same pale cheek patch.",
+  photoData: "images/sp-redcrestedpochard.jpg" },
+
+"sp-marbledduck": { id: "sp-marbledduck", priority: "★★★", name: "Marbled Duck", endemic: true, tripUnique: false, bonus: false,
+  close: "Dark smudgy eye-patch on otherwise pale, mottled plumage; no obvious speculum.",
+  medium: "Small, pale, nondescript dabbler that can be easily overlooked in mixed duck groups.",
+  long: "Overall pale, washed-out appearance distinguishes it from other ducks at distance, even without the eye-patch visible.",
+  pelagic: "",
+  similar: "Lacks the bold head pattern of Garganey or Northern Shoveler; pale overall tone is the best long-range cue.",
+  notes: "Shallow, vegetated lagoon margins, often dabbling quietly and easy to overlook among other ducks. Pale sandy-brown overall with a dark smudgy eye-patch and faintly scalloped flanks.",
+  photoData: "images/sp-marbledduck.jpg" },
+
+"sp-redknobbedcoot": { id: "sp-redknobbedcoot", priority: "★★★", name: "Red-knobbed Coot", endemic: true, tripUnique: false, bonus: false,
+  close: "Two small red frontal knobs above the white shield, visible only at close range or with binoculars/scope.",
+  medium: "Otherwise identical to Eurasian Coot; requires careful scanning of frontal shield area.",
+  long: "Not safely identifiable at long range — requires binocular/scope confirmation of frontal knobs.",
+  pelagic: "",
+  similar: "Differs from Eurasian Coot only by the frontal knobs; shield shape can also differ subtly.",
+  notes: "Open lagoon water, swimming among ordinary coot flocks. Near-identical to Common Coot except for two small red knobs above the white frontal shield — worth checking carefully in any coot group. Recurs at Doñana.",
+  photoData: "images/sp-redknobbedcoot.jpg" },
+
+"sp-mediterraneangull": { id: "sp-mediterraneangull", priority: "★★", name: "Mediterranean Gull", endemic: false, tripUnique: false, bonus: false,
+  close: "All-white wingtips (no black) visible on adults at rest.",
+  medium: "Heavier-billed and more thickset than Black-headed Gull in winter flocks.",
+  long: "All-white wingtips in flight are the most reliable distant cue, lacking the black tips of Black-headed Gull.",
+  pelagic: "",
+  similar: "Separated from winter Black-headed Gull by all-white wingtips and heavier bill.",
+  notes: "Lagoon edges, usually within mixed gull flocks. Winter birds lack the black hood, so look instead for all-white wingtips (no black at all) and a heavy red bill. Recurs at Cartagena, Casablanca.",
+  photoData: "images/sp-mediterraneangull.jpg" },
+
+"sp-ferruginousduck": { id: "sp-ferruginousduck", priority: "★★", name: "Ferruginous Duck", endemic: false, tripUnique: true, bonus: false,
+  close: "Deep chestnut head/breast, white eye (male), and white undertail patch.",
+  medium: "Compact, steep-foreheaded profile distinct from Tufted Duck or Pochard.",
+  long: "White undertail patch flashes in flight and is visible at distance among diving duck flocks.",
+  pelagic: "",
+  similar: "Darker and richer chestnut than female Tufted Duck; white undertail is the key flight cue.",
+  notes: "Open lagoon water among other diving ducks, often just one or two birds in the mix. Deep chestnut-brown body, a pale eye on males, and a bright white undertail patch visible when it flaps or dives.",
+  photoData: "images/sp-ferruginousduck.jpg?v=2" },
+
+"sp-blackneckedgrebe": { id: "sp-blackneckedgrebe", priority: "★", name: "Black-necked Grebe", endemic: false, tripUnique: true, bonus: false,
+  close: "Peaked rear crown and thin uptilted bill visible on close birds.",
+  medium: "Smaller and more compact than Great Crested Grebe, riding lower on the water.",
+  long: "Peaked head shape (rear crown higher than front) separates it from other grebes at range.",
+  pelagic: "",
+  similar: "Told from Slavonian/Horned Grebe by steeper forehead and thinner, slightly uptilted bill.",
+  notes: "Open lagoon water, diving frequently and riding low. Peaked black head shape and a red eye are the quickest clues; look for a hint of golden ear-tufts behind the eye.",
+  photoData: "images/sp-blackneckedgrebe.jpg" },
+
+"sp-moustachedwarbler": { id: "sp-moustachedwarbler", priority: "★★", name: "Moustached Warbler", endemic: false, tripUnique: true, bonus: false,
+  close: "Bold white supercilium and dark crown contrast more sharply than on Sedge Warbler.",
+  medium: "Resident reedbed specialist, more sedentary and lower-skulking than migrant warblers.",
+  long: "Sharp, scratchy song from dense reed cover is the most reliable long-range detection method.",
+  pelagic: "",
+  similar: "Darker crown and more contrasting supercilium than Sedge Warbler; song differs noticeably.",
+  notes: "Dense reedbeds, resident here year-round; a classic skulker that stays low in reed cover. Bold black-and-white striped head with a sharp white moustache stripe is the best clue if it shows even briefly.",
+  photoData: "images/sp-moustachedwarbler.jpg" },
+
+"sp-rufoustailedscrubrobin": { id: "sp-rufoustailedscrubrobin", priority: "★★", name: "Rufous-tailed Scrub-Robin", endemic: false, tripUnique: false, bonus: false,
+  close: "Rufous tail with dark subterminal band and white tip, often cocked and fanned.",
+  medium: "Skulks low in dense scrub, frequently flicking and fanning its distinctive tail.",
+  long: "Tail-cocking behavior in low scrub is the best long-range behavioral cue.",
+  pelagic: "",
+  similar: "Tail pattern and cocking behavior separate it from Nightingale, which lacks the banded tail tip.",
+  notes: "Dense scrub edges; skulking but often gives itself away by cocking and fanning its tail. Rufous tail tipped black-and-white, with a bold pale eyebrow stripe.",
+  photoData: "images/sp-rufoustailedscrubrobin.jpg" },
+
+"sp-trumpeterfinch": { id: "sp-trumpeterfinch", priority: "★★★", name: "Trumpeter Finch", endemic: true, tripUnique: true, bonus: false,
+  close: "Male has a pink-flushed bill and overall sandy-pink wash to plumage.",
+  medium: "Small, compact finch of arid rocky ground, often in pairs or small groups.",
+  long: "Distinctive nasal, buzzing call carries well over open semi-arid terrain.",
+  pelagic: "",
+  similar: "Plainer and sandier than other finches in the region; call is highly distinctive.",
+  notes: "Bare, stony semi-arid ground; feeds on the ground in pairs or small groups with a distinctive nasal, buzzing call. Stubby, bright pink-red bill against an otherwise plain sandy-grey body.",
+  photoData: "images/sp-trumpeterfinch.jpg" },
+
+"sp-blackwheatear": { id: "sp-blackwheatear", priority: "★★★", name: "Black Wheatear", endemic: true, tripUnique: false, bonus: false,
+  close: "Entirely black body with white rump and tail base visible at rest.",
+  medium: "Perches prominently on rocks and cliffs, often near old nest mounds of pebbles.",
+  long: "White rump/tail base flashes obviously in flight against dark rocky slopes.",
+  pelagic: "",
+  similar: "All-black body separates males from all other wheatears in the region; females browner but show same tail pattern.",
+  notes: "Rocky slopes and boulder-strewn gullies; perches prominently on rocks and bobs its tail. Entirely black body with a bright white rump and tail base — unmistakable even at range. Recurs at Cartagena.",
+  photoData: "images/sp-blackwheatear.jpg" },
+
+"sp-theklaslark": { id: "sp-theklaslark", priority: "★★★", name: "Thekla's Lark", endemic: true, tripUnique: false, bonus: false,
+  close: "Shorter, more curved bill than Crested Lark, with finer breast streaking.",
+  medium: "Prefers drier, rockier hillside habitat compared to Crested Lark's open ground preference.",
+  long: "Habitat choice (rocky slopes vs. open flat ground) is a useful first long-range clue before bill shape is checked.",
+  pelagic: "",
+  similar: "Best separated from Crested Lark by bill curvature and habitat; photograph both for review.",
+  notes: "Dry, stony hillsides and steppe edges. Short-crested and ground-feeding; told from Crested Lark by a shorter, more curved bill and finer breast streaking. Recurs at Cartagena, Málaga.",
+  photoData: "images/sp-theklaslark.jpg" },
+
+"sp-bluerockthrush": { id: "sp-bluerockthrush", priority: "★", name: "Blue Rock Thrush", endemic: false, tripUnique: true, bonus: false,
+  close: "Slaty-blue overall plumage on male, darker and more uniform than female.",
+  medium: "Perches upright and stock-still on rock faces and breakwaters.",
+  long: "Dark, stocky shape perched upright on coastal cliffs or harbor structures is the best long-range cue.",
+  pelagic: "",
+  similar: "Darker and bluer than female Black Redstart; upright stocky posture differs from smaller chats.",
+  notes: "Rocky cliffs, old walls, and quarries; perches prominently and alone on exposed rock. Slaty blue-grey overall on males — no other bird here shares that tone.",
+  photoData: "images/sp-bluerockthrush.jpg" },
+
+"sp-eurasiancragmartin": { id: "sp-eurasiancragmartin", priority: "★", name: "Eurasian Crag Martin", endemic: false, tripUnique: false, bonus: false,
+  close: "Pale translucent patches near the tail tip visible on close flying birds against light.",
+  medium: "Broader-winged and slower-flying than Barn Swallow, with squarer tail.",
+  long: "Broad-winged, square-tailed silhouette around cliffs and harbor walls distinguishes it from swallows at range.",
+  pelagic: "",
+  similar: "Lacks the long tail streamers of Barn Swallow; broader wings overall.",
+  notes: "Cliffs, gorges, and old stone structures; flies in slow gliding circuits low around rock faces rather than the fast dashing flight of a swallow. Plain brown above with small white spots near the tail tip, visible when the tail is fanned. Recurs at Tangier.",
+  photoData: "images/sp-eurasiancragmartin.jpg" },
+
+"sp-sardinianwarbler": { id: "sp-sardinianwarbler", priority: "★★", name: "Sardinian Warbler", endemic: false, tripUnique: false, bonus: false,
+  close: "Bright red eye-ring visible even at moderate range on male's black-hooded head.",
+  medium: "Scolding, rattling call from dense scrub, often the first clue to presence.",
+  long: "Dark hooded head with red eye-ring is detectable with binoculars even at modest distance.",
+  pelagic: "",
+  similar: "Black hood and red eye-ring separate it from other Sylvia warblers in the region.",
+  notes: "Dense Mediterranean scrub; skulking but vocal, with a dry scratchy rattle. Male's jet-black hood and bright red eye-ring are diagnostic even on a brief view. Recurs at several stops across the trip.",
+  photoData: "images/sp-sardinianwarbler.jpg" },
+
+"sp-spanishsparrow": { id: "sp-spanishsparrow", priority: "★★", name: "Spanish Sparrow", endemic: false, tripUnique: false, bonus: false,
+  close: "Heavier black streaking on flanks/breast than House Sparrow.",
+  medium: "Often forms larger, denser flocks than House Sparrow around scrub and urban edges.",
+  long: "Flock density and chestnut crown (male) help separate from House Sparrow at a glance.",
+  pelagic: "",
+  similar: "Male has chestnut crown like House Sparrow but heavier black flank streaking.",
+  notes: "Scrubby farmland and roadside trees, often in large noisy flocks. Heavier chestnut crown and bold black flank-streaking separate it from House Sparrow. Recurs at Cartagena, Málaga.",
+  photoData: "images/sp-spanishsparrow.jpg" },
+
+"sp-blackredstart": { id: "sp-blackredstart", priority: "★", name: "Black Redstart", endemic: false, tripUnique: false, bonus: false,
+  close: "Rusty-orange tail contrasting with dark body, constantly shivering.",
+  medium: "Frequent tail-shivering on low perches and rocky/urban edges.",
+  long: "Tail-shivering habit visible at a distance even when plumage details are not.",
+  pelagic: "",
+  similar: "Darker overall than Common Redstart; favors rockier/urban habitat in winter.",
+  notes: "Rocky ground, old buildings, and port edges; perches upright and constantly quivers its tail. Bright orange-red tail flashing against a sooty-grey body is the giveaway. Recurs at Málaga, Casablanca.",
+  photoData: "images/sp-blackredstart.jpg" },
+
+"sp-tawnypipit": { id: "sp-tawnypipit", priority: "★", name: "Tawny Pipit", endemic: false, tripUnique: true, bonus: false,
+  close: "Plain, unstreaked sandy upperparts and long tail visible on close birds.",
+  medium: "Upright stance on open ground/wasteland, longer-tailed and longer-legged than other pipits.",
+  long: "Pale, plain, upright shape on bare open ground is the best long-range cue versus streakier pipits.",
+  pelagic: "",
+  similar: "Much plainer and less streaked than Meadow or Water Pipit, with a more upright stance.",
+  notes: "Open dry ground and bare fields; walks upright rather than the typical pipit crouch, often perching on a rock or clod. Long-legged and plain sandy overall, with a bold pale supercilium.",
+  photoData: "images/sp-tawnypipit.jpg" },
+
+"sp-barbaryfalcon": { id: "sp-barbaryfalcon", priority: "★★", name: "Barbary Falcon", endemic: false, tripUnique: false, bonus: false,
+  close: "Paler, more rufous-washed underparts and a narrower black moustachial stripe than Peregrine.",
+  medium: "Smaller and more compact than Peregrine Falcon, with quicker wingbeats.",
+  long: "Fast, direct flight around coastal cliffs/buildings; smaller and paler overall than Peregrine at range.",
+  pelagic: "",
+  similar: "Smaller, paler, and more compact than Peregrine Falcon; some authorities treat it as a Peregrine subspecies, but eBird/Clements maintain it as a full species.",
+  notes: "Cliffs and rocky outcrops; fast, direct flight hunting open air over scrub and cliff edges. Paler and more rufous-washed than Peregrine Falcon, with a narrower dark moustache mark. Recurs at Casablanca.",
+  photoData: "images/sp-barbaryfalcon.jpg" },
+
+"sp-barbarypartridge": { id: "sp-barbarypartridge", priority: "★★★", name: "Barbary Partridge", endemic: true, tripUnique: true, bonus: false,
+  close: "Grey breast band bordered chestnut, with chestnut and black streaking on the flanks.",
+  medium: "Explosive, low flush from rocky scrub/hillside, usually in coveys.",
+  long: "Low, fast covey flush over open rocky ground is the most likely encounter; NW African endemic.",
+  pelagic: "",
+  similar: "Greyer breast band and different flank pattern separate it from the introduced/similar Red-legged Partridge.",
+  notes: "Rocky scrub and hillside; usually encountered as an explosive low flush from a covey rather than a sighting on the ground. Blue-grey breast band and chestnut-streaked flanks, with a red bill and legs.",
+  photoData: "images/sp-barbarypartridge.jpg" },
+
+"sp-africanbluetit": { id: "sp-africanbluetit", priority: "★★★", name: "African Blue Tit", endemic: false, tripUnique: true, bonus: false,
+  close: "Black (not blue) crown distinguishes it instantly from European Blue Tit at any decent view.",
+  medium: "Forages actively in cork-oak/park trees, often in small mixed flocks.",
+  long: "Overall tit-like shape and behavior identical to European Blue Tit at range — the black crown must be confirmed at closer range or with a photo.",
+  pelagic: "",
+  similar: "Distinct species from the already-seen Eurasian Blue Tit under current Clements/eBird taxonomy; black crown (vs. blue) is the key difference once seen well.",
+  notes: "Woodland, scrub, and gardens; active and usually moving through foliage in small groups, just like Eurasian Blue Tit. Black crown — not blue — is the one clean separator from that already-seen species.",
+  photoData: "images/sp-africanbluetit.jpg" },
+
+"sp-tristramswarbler": { id: "sp-tristramswarbler", priority: "★★★", name: "Tristram's Warbler", endemic: false, tripUnique: true, bonus: false,
+  close: "Rufous flanks contrasting with a grey head and white throat, red eye visible at close range.",
+  medium: "Skulks low in dense maquis/scrub, often detected by scratchy song before being seen.",
+  long: "Scratchy, rattling song from dense hillside scrub is the most reliable long-range cue; ⚠ confirm guide's route passes through suitable scrub habitat, not just lowland park.",
+  pelagic: "",
+  similar: "Similar to Subalpine Warbler but with richer rufous flanks and a different, scratchier song; range (NW Africa + tiny SE Spain population) is the best confirmation.",
+  notes: "Dense hillside scrub; skulking, with a scratchy song from deep cover doing most of the work. Grey head and upperparts contrast with warm rusty-buff underparts and a white throat.",
+  photoData: "images/sp-tristramswarbler.jpg" },
+
+"sp-longleggedbuzzard": { id: "sp-longleggedbuzzard", priority: "★★", name: "Long-legged Buzzard", endemic: false, tripUnique: true, bonus: false,
+  close: "Pale head and breast contrasting with darker belly patch, rufous tail lacking strong barring.",
+  medium: "Longer-winged and longer-legged than Common Buzzard, often perches more upright.",
+  long: "Frequently hovers or hangs in the wind over open hillside/farmland, unlike the more direct soaring flight of Common Buzzard.",
+  pelagic: "",
+  similar: "Paler and longer-winged than Common Buzzard, with a more frequent hovering/hanging flight.",
+  notes: "Open hillside and scrub; soars and sometimes hovers while hunting, unlike the more perch-hunting Common Buzzard. Pale head and breast contrast with a dark belly patch and a rufous-toned tail.",
+  photoData: "images/sp-longleggedbuzzard.jpg" },
+
+"sp-baroloshearwater": { id: "sp-baroloshearwater", priority: "★★★", name: "Barolo Shearwater", endemic: true, tripUnique: true, bonus: false,
+  close: "Small black-and-white shearwater with a clean white face wrapping up behind the eye and a dark cap that does not extend below the eye.",
+  medium: "Tiny size and fast, fluttery wingbeats compared to Cory's or Great Shearwater, flying low and close to the water.",
+  long: "Small, fast-flying black-and-white shape skimming low over the swell in quick, low arcs rather than high glides.",
+  pelagic: "Rapid, low, fluttering flight with quick wingbeats between short glides — very different from the slow, stiff-winged arcs of larger shearwaters.",
+  similar: "Smaller and faster-flying than Cory's or Great Shearwater; separated from the now-allopatric nominate Little Shearwater by range alone.",
+  notes: "Smaller and faster than the other shearwaters here, with quick, fluttery wingbeats low over the water. Clean white underparts and an overall small, compact shape.",
+  photoData: "images/sp-baroloshearwater.jpg" },
+
+"sp-blackwingedkite": { id: "sp-blackwingedkite", priority: "★", name: "Black-winged Kite", endemic: false, tripUnique: true, bonus: false,
+  close: "Pale grey-and-white plumage with a black shoulder patch visible on folded wings at rest.",
+  medium: "Hovers kestrel-like over open grassland, often perches upright on isolated trees or wires.",
+  long: "Pale, almost gull-like shape hovering or perched prominently over open ground is the best long-range cue.",
+  pelagic: "",
+  similar: "Paler and more compact than female harriers; hovering behavior over open ground is the best behavioral cue.",
+  notes: "Open marsh and grassland edges; hovers persistently while hunting and often perches on an isolated tree or wire. Pale grey-and-white body with bold black shoulder patches and a red eye.",
+  photoData: "images/sp-blackwingedkite.jpg" },
+
+"sp-commonbulbul": { id: "sp-commonbulbul", priority: "★", name: "Common Bulbul", endemic: false, tripUnique: false, bonus: false,
+  close: "Plain dark brown body with a slight crest and a pale lower belly/vent.",
+  medium: "Jaunty crest raised when alert, moves actively through park and garden vegetation.",
+  long: "Loud, chattering, scratchy song from urban parks/gardens is the most reliable long-range cue.",
+  pelagic: "",
+  similar: "Plainer and browner than other regional bulbuls; voice is the most reliable cue.",
+  notes: "Gardens, scrub, and urban green space; noisy and gregarious, with constant chattering calls usually heard before it's seen. Plain dark brown-grey body and black face, with no bold markings to rely on otherwise. Recurs at Casablanca.",
+  photoData: "images/sp-commonbulbul.jpg" },
+
+"sp-commonwaxbill": { id: "sp-commonwaxbill", priority: "★", name: "Common Waxbill", endemic: false, tripUnique: false, bonus: false,
+  close: "Tiny finch with a bright red bill and red eye-stripe, fine dark barring over a pinkish-buff body and a red-washed belly patch.",
+  medium: "Small, active flocks working low grass and reedbed edges, with constant soft contact calls.",
+  long: "Tiny size and bouncing, low flight between grass clumps in tight flocks is the best long-range cue.",
+  pelagic: "",
+  similar: "Red bill and barred plumage separate it from all native European finches; no real confusion species in this region.",
+  notes: "Reedy, grassy lagoon edges; small flocks feed low in cover rather than out in the open. Bright red eye-mask and bill stand out against a finely barred grey-brown body. Recurs at Casablanca.",
+  photoData: "images/sp-commonwaxbill.jpg" },
+
+"sp-corysshearwater": { id: "sp-corysshearwater", priority: "★★★", name: "Cory's Shearwater", endemic: true, tripUnique: true, bonus: false,
+  close: "Pale yellowish bill and a gently rounded, smudgy brownish-grey hood blending into a white throat, with no sharply demarcated cap.",
+  medium: "Large, bulky shearwater with broad-based wings, flying with slow, stiff-winged glides low over the swell.",
+  long: "Big, languid, arcing glides on broad wings, rising and falling with the swell — the most reliable long-range cue among the Atlantic shearwaters.",
+  pelagic: "Long, effortless arcing glides on broad, slightly bowed wings; flap rate is slow and infrequent compared to smaller shearwaters.",
+  similar: "Larger and paler-billed than Great Shearwater, lacking its sharp dark cap and white collar; bulkier than Cape Verde Shearwater.",
+  notes: "Languid, stiff-winged shearing flight, often in loose flocks. Pale yellowish bill and a gently rounded head-to-bill profile, with no sharp dark cap like Great Shearwater shows.",
+  photoData: "images/sp-corysshearwater.jpg" },
+
+"sp-europeanstormpetrel": { id: "sp-europeanstormpetrel", priority: "★★", name: "European Storm-Petrel", endemic: false, tripUnique: true, bonus: false,
+  close: "Tiny, all-dark body with a square tail and a bold white rump band wrapping onto the undertail; white underwing stripe visible in good light.",
+  medium: "Fluttery, bat-like flight low over the water, often following directly in the ship's wake.",
+  long: "Small, dark, fluttering shape low over the water with a white rump flashing on each upstroke — visible at moderate range even without other detail.",
+  pelagic: "Direct, fluttering flight with shallow wingbeats, feet rarely visible; flies low and steady rather than bounding or pattering dramatically.",
+  similar: "Smaller than Band-rumped Storm-Petrel with a square (not forked) tail and narrower white rump band; lacks the bounding flight of White-faced Storm-Petrel.",
+  notes: "Weak, fluttering, almost bat-like flight low over the water. Tiny size and a clean square white rump band, with no pale wing markings to confuse it with the Band-rumped/Madeiran Storm-Petrel.",
+  photoData: "images/sp-europeanstormpetrel.jpg" },
+
+"sp-greatshearwater": { id: "sp-greatshearwater", priority: "★★★", name: "Great Shearwater", endemic: true, tripUnique: true, bonus: false,
+  close: "Sharp dark brown cap contrasts with a clean white collar and throat; dark smudge on the belly and a dark-tipped yellow bill visible at rest.",
+  medium: "Large shearwater with stiff, fast wingbeats alternating with low glides on flat wings.",
+  long: "Sharp white-collar-against-dark-cap contrast is visible at considerable range, even when other plumage details are not.",
+  pelagic: "Fast, stiff-winged flapping alternating with short glides low over the water; more flap-heavy than the languid arcs of Cory's Shearwater.",
+  similar: "Sharper-edged dark cap and white collar separate it from the smudgier-headed Cory's Shearwater; dark belly smudge is a useful confirming feature.",
+  notes: "Stiff-winged shearing flight low over the water, often in loose groups. Dark cap sharply demarcated from a white face and throat, with a dark smudge on the belly and a white band across the rump.",
+  photoData: "images/sp-greatshearwater.jpg" },
+
+"sp-greatskua": { id: "sp-greatskua", priority: "★★", name: "Great Skua", endemic: false, tripUnique: true, bonus: false,
+  close: "Bulky, heavily built, dark brown body with a thick neck and large bill; bold white wing-flash visible at the base of the primaries even on a folded wing.",
+  medium: "Large, broad-winged, gull-like but heavier and more menacing in flight, often harassing other seabirds for food.",
+  long: "Big, dark, broad-winged shape with conspicuous white wing-flashes, often seen chasing gannets or shearwaters at range.",
+  pelagic: "Powerful, direct flight on broad wings; white primary flashes are the most visible long-range cue during aggressive chases of other seabirds.",
+  similar: "Bulkier and broader-winged than any skua/jaeger expected on this crossing; white wing-flash is more extensive than on Pomarine or Long-tailed Skua.",
+  notes: "Heavy, direct flight; aggressive, often chasing other seabirds to steal their catch. Bulky and all-dark brown with bold white flashes at the base of the wings.",
+  photoData: "images/sp-greatskua.jpg" },
+
+"sp-greyphalarope": { id: "sp-greyphalarope", priority: "★", name: "Grey Phalarope (Red Phalarope)", endemic: false, tripUnique: true, bonus: false,
+  close: "Needle-thin black bill, dark eye-patch, and pale grey-and-white winter plumage on a tiny, delicate wader-like bird sitting on the water.",
+  medium: "Buoyant, tiny shorebird-like swimmer riding high on the water, picking at the surface rather than diving.",
+  long: "Distinctive spinning motion while feeding at the surface is visible at a distance even before the bird's small size is apparent.",
+  pelagic: "Light, buoyant, almost tern-like flight low over the water; on the water, the constant spinning feeding action is the best identifying behavior.",
+  similar: "Distinguished from Red-necked Phalarope by a stouter bill and plainer grey winter plumage; spinning feeding behavior is shared by both phalarope species.",
+  notes: "Swims buoyantly and spins in tight circles on the water to stir up food — a behavior no other bird here shows. Needle-thin black bill, clean grey-and-white winter plumage, and a black patch through the eye.",
+  photoData: "images/sp-greyphalarope.jpg" },
+
+"sp-iberianmagpie": { id: "sp-iberianmagpie", priority: "★★★", name: "Iberian Magpie (Azure-winged Magpie)", endemic: true, tripUnique: false, bonus: false,
+  close: "Soft pinkish-buff body, black cap, and powder-blue wings/tail visible on perched birds.",
+  medium: "Moves in noisy, loose family flocks through open woodland and parkland edges.",
+  long: "Long blue tail and blue wings flashing in low, flap-and-glide flight between trees are visible at considerable range.",
+  pelagic: "",
+  similar: "Unmistakable in range — no other magpie-like bird shows this combination of blue wings/tail and pink-buff body; famous biogeographic disjunction from the East Asian population.",
+  notes: "Open woodland, pine groves, and parkland; travels in noisy, loose family flocks. Pale blue-grey wings and tail, black cap, and soft buffy-pink underparts. Recurs at Doñana.",
+  photoData: "images/sp-iberianmagpie.jpg" },
+
+"sp-greaterspottedeagle": { id: "sp-greaterspottedeagle", priority: "", name: "Greater Spotted Eagle", endemic: false, tripUnique: false, bonus: true,
+  close: "Evenly dark brown plumage overall, lacking the pale forewing patches of Spanish Imperial Eagle.",
+  medium: "Broader, more evenly dark wings than Spanish Imperial Eagle, with a shorter tail.",
+  long: "Heavy, uniformly dark soaring shape over open marsh, often with shallow, labored wingbeats — genuinely rare anywhere in Iberia.",
+  pelagic: "",
+  similar: "Darker and more uniform than Spanish Imperial Eagle, which shows pale forewing patches; separated from Lesser Spotted Eagle mainly by structure and habitat.",
+  notes: "Open marsh and wetland edge; scarce here in winter, hunting low in flight or scanning from a perch. Uniformly dark brown with broad, rounded wings — a paler patch at the base of the tail is sometimes visible in flight.",
+  photoData: "images/sp-greaterspottedeagle.jpg" },
+
+"sp-commoncrane": { id: "sp-commoncrane", priority: "★★", name: "Common Crane", endemic: false, tripUnique: true, bonus: false,
+  close: "Grey body with a red crown patch and black-and-white head/neck pattern visible on standing birds.",
+  medium: "Tall, long-necked, long-legged bird often in large flocks at marsh/rice-field fringe.",
+  long: "Deep trumpeting calls and long necks extended in V-formation flight are audible and visible at great distance; ⚠ confirm with Doñana Wings whether the day's route passes through the rice-field fringe zones.",
+  pelagic: "",
+  similar: "Larger and longer-necked than any heron; flight formation and bugling call are diagnostic even before plumage is assessed.",
+  notes: "Open marsh and rice-field fringe; forms large loose flocks with loud bugling calls that carry well before any birds are in view. Tall grey body with a black-and-white neck pattern and a small red crown patch.",
+  photoData: "images/sp-commoncrane.jpg" },
+
+"sp-blackstork": { id: "sp-blackstork", priority: "★★", name: "Black Stork", endemic: false, tripUnique: true, bonus: false,
+  close: "Glossy black body with white belly and red bill/legs, visible on a perched or wading bird.",
+  medium: "Slimmer and shyer than White Stork, often solitary rather than in large flocks.",
+  long: "Soars on flat (not bowed) wings with neck extended; dark body contrasting with white underparts is visible at range.",
+  pelagic: "",
+  similar: "Darker and slimmer than White Stork, with a more retiring, solitary habit; scarce winter visitor to Doñana.",
+  notes: "Marsh edges and open wetland; scarce here in winter and usually solitary and wary. Glossy black body with a sharply contrasting white belly, plus a red bill and legs.",
+  photoData: "images/sp-blackstork.jpg" },
+
+"sp-lessercrestedtern": { id: "sp-lessercrestedtern", priority: "", name: "Lesser Crested Tern", endemic: false, tripUnique: false, bonus: true,
+  close: "Slender orange-yellow bill and a shaggy black cap, with paler grey upperparts than Royal Tern.",
+  medium: "Slighter build than the larger Greater Crested Tern, with a thinner, more uniformly colored bill.",
+  long: "Tern-shaped silhouette with steady, buoyant flight and frequent plunge-diving; bill color is the key distant cue in good light.",
+  pelagic: "",
+  similar: "Smaller and slighter than Greater Crested Tern, with a thinner orange-yellow (not heavier yellow) bill; told from Royal Tern by bill color and smaller size.",
+  notes: "Harbor front and coastal waters; worth scanning any tern flock closely rather than assuming they're all the commoner species. Slimmer, more uniformly orange bill and a slightly smaller build than the Royal/West African Crested Terns it associates with.",
+  photoData: "images/sp-lessercrestedtern.jpg" },
+
+"sp-levaillantswoodpecker": { id: "sp-levaillantswoodpecker", priority: "★★★", name: "Levaillant's Woodpecker", endemic: true, tripUnique: true, bonus: false,
+  close: "Spotted-and-barred back pattern with a red crown on the male, yellowish-green wash to the upperparts.",
+  medium: "Works open woodland and park-edge trees, drumming noticeably softer than European Green Woodpecker.",
+  long: "Yellow-green tone and undulating flight across open woodland are the best long-range cues; NW African endemic.",
+  pelagic: "",
+  similar: "Smaller and more barred above than European Green Woodpecker, with a softer voice and drum.",
+  notes: "Open woodland, orchards, and palm groves; drums more softly than European Green Woodpecker and often feeds on the ground for ants. Green back and red crown, in a Green Woodpecker-shaped bird.",
+  photoData: "images/sp-levaillantswoodpecker.jpg?v=2" },
+
+"sp-longtailedskua": { id: "sp-longtailedskua", priority: "★", name: "Long-tailed Skua", endemic: false, tripUnique: true, bonus: false,
+  close: "Slim build with very long, pointed central tail feathers on adults; pale collar and pale-based bill visible on a perched or close-flying bird.",
+  medium: "Slighter and more tern-like in flight than other skuas, with elegant, buoyant wingbeats.",
+  long: "Slim, light flight silhouette with long tail streamers trailing well behind on adults — the most reliable long-range cue versus bulkier skuas.",
+  pelagic: "Light, agile, tern-like flight with shallow wingbeats; far less heavy and direct than Pomarine or Great Skua.",
+  similar: "Slimmer and more buoyant in flight than Pomarine Skua, with longer, thinner tail streamers on adults and a paler, more contrasting head/body pattern.",
+  notes: "Lighter, more tern-like flight than the bulkier skuas. Slim build with long central tail streamers on adults, and a paler overall body tone.",
+  photoData: "images/sp-longtailedskua.jpg" },
+
+"sp-madeiranstormpetrel": { id: "sp-madeiranstormpetrel", priority: "★★★", name: "Band-rumped (Madeiran) Storm-Petrel", endemic: true, tripUnique: true, bonus: false,
+  close: "All-dark body with a broad white rump band extending further onto the flanks than European Storm-Petrel; tail shows a shallow fork in good light.",
+  medium: "Steadier, more direct flight than the fluttery European Storm-Petrel, with longer wings and less erratic movement.",
+  long: "Broader white rump band and a slightly forked tail are the best distant cues separating it from European Storm-Petrel.",
+  pelagic: "Flight is more direct and gliding than European Storm-Petrel's constant fluttering, with longer wings giving a more shearwater-like silhouette in miniature.",
+  similar: "Broader white rump and forked (not square) tail separate it from European Storm-Petrel; flight style is steadier and less erratic.",
+  notes: "Fluttery, bounding flight low over the water, occasionally pattering its feet on the surface. Square white rump band that wraps further around the sides than most storm-petrels, and a forked tail.",
+  photoData: "images/sp-madeiranstormpetrel.jpg" },
+
+"sp-maghrebwheatear": { id: "sp-maghrebwheatear", priority: "★★★", name: "Maghreb Wheatear", endemic: true, tripUnique: true, bonus: false,
+  close: "Bold black-and-white pattern with a black throat/face and white crown, perched upright.",
+  medium: "Perches prominently on low rocks/scrub in open rocky ground, frequent tail-flicking.",
+  long: "Bold black-and-white pattern visible at distance on a bird perched upright on an exposed rock.",
+  pelagic: "",
+  similar: "Closely related to the Black Wheatear/Seebohm's Wheatear complex; range (NW Africa only) and white crown are the most reliable cues.",
+  notes: "Open rocky, stony ground; perches upright on rocks and bobs and fans its tail like other wheatears. Bold black-and-white plumage with a mostly black tail is the best clue here.",
+  photoData: "images/sp-maghrebwheatear.jpg" },
+
+"sp-moussiersredstart": { id: "sp-moussiersredstart", priority: "★★★", name: "Moussier's Redstart", endemic: true, tripUnique: false, bonus: false,
+  close: "Male shows black face/back, orange underparts, and a bold white wing/forehead patch; female plainer grey-brown with an orange-washed tail.",
+  medium: "Active, often tail-fanning bird of park edges and scrub, frequently perching in the open.",
+  long: "Striking tricolor pattern on the male is visible and unmistakable even at distance in good light.",
+  pelagic: "",
+  similar: "Male unmistakable; female separated from other redstarts by orange (not rufous) tail wash and North African range.",
+  notes: "Scrub and garden edges; active, flicking its tail and wings while perched low in the open. Male's bold black-and-white face pattern with a bright orange breast and rump is unmistakable. Recurs at Casablanca.",
+  photoData: "images/sp-moussiersredstart.jpg" },
+
+"sp-pomarineskua": { id: "sp-pomarineskua", priority: "★", name: "Pomarine Skua", endemic: false, tripUnique: true, bonus: false,
+  close: "Heavy-bodied with a thick neck and bill; adults show distinctive twisted, spoon-shaped central tail feathers, best seen at rest or in calm flight.",
+  medium: "Bulkier and more gull-like in flight than Long-tailed Skua, with slower, more deliberate wingbeats.",
+  long: "Heavy, direct flight with broad-based wings; twisted central tail feathers on adults are visible at moderate range in good light.",
+  pelagic: "Heavier, more labored flapping flight than Long-tailed Skua, with less buoyancy; often pursues other seabirds directly rather than gliding alongside.",
+  similar: "Bulkier and heavier-flying than Long-tailed Skua, with shorter, twisted (not streamer-like) tail feathers; smaller and less bulky than Great Skua.",
+  notes: "Heavy, direct flight, sometimes harassing other seabirds. Heavy-bodied with broad-based wings; adults show twisted, spoon-shaped central tail feathers in good viewing conditions.",
+  photoData: "images/sp-pomarineskua.jpg" },
+
+"sp-puertoricanoriole": { id: "sp-puertoricanoriole", priority: "★★★", name: "Puerto Rican Oriole", endemic: true, tripUnique: true, bonus: false,
+  close: "Black hood and back contrast with bright orange-yellow underparts and shoulder patch; long black tail.",
+  medium: "Forages actively at forest edge and clearings, often giving away its presence with a clear whistled song before being seen.",
+  long: "Bold black-and-orange contrast is visible at a distance against green forest-edge foliage; song carries well through the canopy.",
+  pelagic: "",
+  similar: "Black hood (not a solid black head-and-back like some Caribbean orioles) combined with single-island range makes it straightforward to identify once seen.",
+  notes: "Forest edge, foraging in mid-canopy, often in pairs. Black body set off by a bright yellow-orange shoulder patch and rump.",
+  photoData: "images/sp-puertoricanoriole.jpg" },
+
+"sp-puertoricanparrot": { id: "sp-puertoricanparrot", priority: "★★★", name: "Puerto Rican Parrot", endemic: true, tripUnique: true, bonus: false,
+  close: "Bright green overall with a red forehead patch and a pale eye-ring; blue flight feathers visible only when the wing is spread.",
+  medium: "Flies in small, fast, noisy flocks above the canopy, giving sharp bugling calls.",
+  long: "Loud, harsh bugling calls overhead are the most reliable detection method; green body blends into canopy unless seen in flight against the sky.",
+  pelagic: "",
+  similar: "No other parrot occurs in the wild on Puerto Rico; red forehead patch confirms identification if seen well.",
+  notes: "Targeted via a dedicated guided morning at Río Abajo — the other wild population site alongside El Yunque, and a stronger shot than the El Yunque self-guided afternoon alone. Noisy in flight, usually in pairs or small groups above the canopy; bright green body with a red forehead band.",
+  photoData: "images/sp-puertoricanparrot.jpg?v=2" },
+
+"sp-puertoricanwoodpecker": { id: "sp-puertoricanwoodpecker", priority: "★★★", name: "Puerto Rican Woodpecker", endemic: true, tripUnique: true, bonus: false,
+  close: "Black-and-white barred back, red crown (male) or black crown (female), and a pale, unmarked face.",
+  medium: "Active, noisy woodpecker working tree trunks and dead limbs in forest, parks, and gardens alike.",
+  long: "Loud rattling calls and a typical woodpecker's looping flight between trees are the best long-range cues; widespread even in urban green space.",
+  pelagic: "",
+  similar: "Only woodpecker species present on Puerto Rico, so any woodpecker-shaped bird on the island is this species.",
+  notes: "Widespread in forest and even port-adjacent green space — good odds without a long drive. Active and vocal, often drumming; black-and-white barred back with a red crown and pale face.",
+  photoData: "images/sp-puertoricanwoodpecker.jpg" },
+
+"sp-sabinesgull": { id: "sp-sabinesgull", priority: "★", name: "Sabine's Gull", endemic: false, tripUnique: true, bonus: false,
+  close: "Striking tri-colored upperwing pattern (black outer, white triangle, grey inner) visible on a folded wing at rest; slightly forked tail.",
+  medium: "Buoyant, tern-like flight distinct from the heavier flight of larger gulls.",
+  long: "Bold black-white-grey wing pattern is unmistakable in flight even at considerable distance — the single best identification feature on this crossing.",
+  pelagic: "Light, agile, tern-like flight with quick wingbeats; the tri-colored wing pattern flashes clearly with every wingbeat even in poor light.",
+  similar: "No other gull on this route shows the same bold tri-colored upperwing pattern; the forked tail also distinguishes it from all but kittiwake (not expected here).",
+  notes: "Light, tern-like flight, picking food from the surface rather than plunge-diving. Bold black-grey-white triangular wing pattern is the giveaway, even on a distant flying bird.",
+  photoData: "images/sp-sabinesgull.jpg" },
+
+"sp-spanishimperialeagle": { id: "sp-spanishimperialeagle", priority: "★★★", name: "Spanish Imperial Eagle", endemic: true, tripUnique: true, bonus: false,
+  close: "Pale 'headlights' (whitish leading-edge patches) on the forewing diagnostic on adults at rest or overhead.",
+  medium: "Large, dark eagle perched on marsh-edge trees or pylons, often near known nest sites.",
+  long: "Heavy, broad-winged soaring silhouette over open marisma with pale forewing patches visible even at distance.",
+  pelagic: "",
+  similar: "Darker and more uniform than Golden Eagle, with pale forewing patches Golden Eagle lacks; entire breeding range confined to Spain.",
+  notes: "Open holm-oak woodland and marsh-edge cork oak; perches conspicuously in tall trees and soars on broad, flat wings. Bold white shoulder patches on the leading edge of the wing are diagnostic on adults.",
+  photoData: "images/sp-spanishimperialeagle.jpg" },
+
+"sp-squaccoheron": { id: "sp-squaccoheron", priority: "★", name: "Squacco Heron", endemic: false, tripUnique: true, bonus: false,
+  close: "Buff-streaked neck and back contrasting with white wings, visible on a bird standing still at water's edge.",
+  medium: "Hunches low and motionless at the water's edge, easy to overlook among reeds.",
+  long: "Buff body with strikingly white flight feathers flashing on takeoff is the best long-range cue; ⚠ mostly a trans-Saharan migrant, so treat as a real-but-low-odds November target.",
+  pelagic: "",
+  similar: "Buffier and less contrasty than Cattle Egret at rest, but the white wings in flight are shared — flight pattern is the best separator.",
+  notes: "Reedy marsh margins; skulks low and freezes rather than flying when approached. Looks plain buff-streaked at rest, but flushes to show surprisingly white wings and back.",
+  photoData: "images/sp-squaccoheron.jpg" },
+
+"sp-whiteheadedduck": { id: "sp-whiteheadedduck", priority: "★★★", name: "White-headed Duck", endemic: false, tripUnique: true, bonus: false,
+  close: "Bulbous blue-grey bill with a black tip and swollen base, contrasting with the pale head.",
+  medium: "Swims low in the water with the tail often cocked upward, unlike most other ducks.",
+  long: "Pale head and bill visible on the water at distance among mixed duck rafts; one of the rarest ducks in the world, Doñana a key stronghold.",
+  pelagic: "",
+  similar: "Pale head and bill shape separate it from all other ducks present; no real confusion species.",
+  notes: "Open lagoon water, diving among other ducks and often holding a stiff, cocked tail. Pale whitish head with a swollen blue-grey bill base and a dark cap on top.",
+  photoData: "images/sp-whiteheadedduck.jpg" },
+
+"sp-crestedlark": { id: "sp-crestedlark", priority: "★", name: "Crested Lark", endemic: false, tripUnique: false, bonus: false,
+  close: "Long, slightly drooping crest visible on perched or standing birds; warm sandy-brown plumage.",
+  medium: "Upright stance on open ground or roadsides; crest often raised when alert.",
+  long: "Stocky lark walking/running on bare ground; longer, straighter bill than Thekla's gives a slightly different head profile at range.",
+  pelagic: "",
+  similar: "Larger overall and longer-billed than Thekla's Lark; the two are best separated by bill shape and habitat (Crested favors more open, disturbed ground).",
+  notes: "Bare ground, roadsides, and waste ground; walks and runs rather than flying when approached, raising a shaggy crest when alert. Longer, straighter bill than Thekla's Lark — see the ID note above for the side-by-side comparison. Recurs at Casablanca.",
+  photoData: "images/sp-crestedlark.jpg" },
+
+"sp-housebunting": { id: "sp-housebunting", priority: "★★★", name: "House Bunting", endemic: true, tripUnique: false, bonus: false,
+  close: "Male shows a rufous-chestnut rump and warm cinnamon underparts visible at close range on perched birds.",
+  medium: "Small bunting habitually perched on buildings, walls, and wires in urban settings rather than open countryside.",
+  long: "Compact shape and constant association with man-made structures (rooftops, plazas, walls) is the best long-range habitat cue.",
+  pelagic: "",
+  similar: "Told from House Sparrow by slimmer build, longer tail, and finch-like bill; far more attached to buildings than other regional buntings.",
+  notes: "Urban areas, walls, and rooftops; confiding and often feeding right on the ground around buildings. Streaky grey-brown overall with a faint rufous wash and a fairly plain face. Recurs at Casablanca.",
+  photoData: "images/sp-housebunting.jpg" },
+
+"sp-westafricancrestedtern": { id: "sp-westafricancrestedtern", priority: "★★★", name: "West African Crested Tern", endemic: false, tripUnique: true, bonus: false,
+  close: "",
+  medium: "",
+  long: "",
+  pelagic: "",
+  similar: "",
+  notes: "Coastal waters and the harbor front; plunge-dives for fish, often alongside other terns. Shaggy black crest and an orange-yellow bill — Casablanca is near the northern edge of where this species disperses after breeding, so it's worth a careful look at any crested tern here.",
+  photoData: ""
+},
+
+"sp-laughingdove": { id: "sp-laughingdove", priority: "★", name: "Laughing Dove", endemic: false, tripUnique: true, bonus: false,
+  close: "Pinkish-buff breast with fine black speckled necklace patch visible on close perched birds.",
+  medium: "Small, slim dove often seen in pairs on wires, rooftops, and open ground in urban/park settings.",
+  long: "Soft, purring multi-note call from gardens and parks is often the first clue; small size and pale, sandy tone distinguish it in flight from larger doves.",
+  pelagic: "",
+  similar: "Smaller and paler than Collared Dove, lacking a complete neck collar; flight is quicker and more direct.",
+  notes: "Urban parks, gardens, and palm groves; feeds on the ground in pairs or small groups with a soft, bubbling coo. Small and slim with a pinkish breast finely speckled with dark spots, and no black neck-collar.",
+  photoData: "images/sp-laughingdove.jpg" },
+
+"sp-blackcappedpetrel": { id: "sp-blackcappedpetrel", priority: "★★★", name: "Black-capped Petrel", endemic: true, tripUnique: true, bonus: false,
+  close: "Sooty-black cap and upperparts contrast sharply with a clean white collar/nape and mostly white underparts, visible once the bird banks close to the ship.",
+  medium: "Black cap contrasting with white nape/collar visible in good light at moderate range; white rump band shows in flight.",
+  long: "Bounding, agile flight typical of a Pterodroma — towering arcs well above the water in any wind; white nape patch is the best far-range cue on an otherwise dark-capped bird.",
+  pelagic: "Most likely encountered as the ship nears the San Juan approach; scan for the bold white nape/rump contrast against the dark cap and back during dynamic, soaring flight.",
+  similar: "Separated from other gadfly petrels by the combination of white nape, white rump, and largely white underparts; no other expected species on this route shows this exact pattern.",
+  notes: "Strong, agile flight banking low over the waves. White face and collar contrast with a dark cap, and a white rump patch shows in flight. Expect this one near the San Juan approach — the back end of the crossing, not the early Atlantic days.",
+  photoData: "images/sp-blackcappedpetrel.jpg" },
+
+"sp-capeverdeshearwater": { id: "sp-capeverdeshearwater", priority: "★★★", name: "Cape Verde Shearwater", endemic: true, tripUnique: true, bonus: false,
+  close: "Slim dark cap extends only slightly below the eye, paired with a fine dark bill and a clean white throat visible on close, calm-water approaches.",
+  medium: "Slimmer and slightly smaller than Cory's Shearwater, with a noticeably darker cap and a finer, less robust bill.",
+  long: "Similar stiff-winged, languid flight style to Cory's Shearwater; best picked out within mixed shearwater groups by its smaller size and darker head.",
+  pelagic: "Likelihood depends on the ship's track — birds disperse from Cape Verde breeding colonies into the surrounding tropical Atlantic, so a more southerly/westerly crossing route improves odds.",
+  similar: "Easily lumped with Cory's Shearwater at a distance; smaller size, darker cap, and finer bill are the only reliable separators, best confirmed with photos.",
+  notes: "Shearing flight similar to Cory's Shearwater but typically a more solitary bird. Slimmer build and a darker bill are the subtle separators — worth a photo to confirm. Route-dependent: only a realistic chance if the ship's track runs far enough south.",
+  photoData: "images/sp-capeverdeshearwater.jpg" },
+
+"sp-feaspetrel": { id: "sp-feaspetrel", priority: "★★★", name: "Fea's Petrel", endemic: true, tripUnique: true, bonus: false,
+  close: "Dark grey-brown hood merges smoothly into the back with no sharp cap line, set off by a pale grey collar and a stout, mostly black bill.",
+  medium: "Compact, dark gadfly petrel with a bold dark diagonal bar across the underwing visible in good light.",
+  long: "Fast, buoyant, bounding flight with high arcing climbs well above the swell — classic Pterodroma flight style, very different from shearwaters' low, stiff-winged glides.",
+  pelagic: "Scan during active feeding frenzies or alongside shearwater flocks; the towering, erratic flight path stands out even before plumage details are visible.",
+  similar: "Very similar to Zino's Petrel (not expected on this route) and can suggest a small dark shearwater at a glance, but the bounding flight and underwing bar are diagnostic.",
+  notes: "Fast, buoyant, arcing flight that banks high above the water in any wind. Dark cap and upperparts with a paler grey back and dark underwing.",
+  photoData: "images/sp-feaspetrel.jpg" },
+
+"sp-whitefacedstormpetrel": { id: "sp-whitefacedstormpetrel", priority: "★★★", name: "White-faced Storm-Petrel", endemic: true, tripUnique: true, bonus: false,
+  close: "Bold white face and supercilium contrast with a dark crown and eye-stripe; long yellow legs and feet trail visibly in flight.",
+  medium: "Pale face and underparts contrast with darker upperparts; long yellow legs trail visibly in flight.",
+  long: "Distinctive bounding, 'pogo-stick' leaps off the water surface using both feet together — unlike any other storm-petrel's flight style on this route, visible well before plumage can be assessed.",
+  pelagic: "Look for the springing, two-footed bounce across the water rather than the fluttering or pattering flight typical of other storm-petrels.",
+  similar: "Flight behavior alone separates it from European and Band-rumped Storm-Petrels, which patter or flutter rather than bounce.",
+  notes: "Distinctive bounding flight, kicking off the water with both feet at once rather than the fluttering glide of other storm-petrels. Striking white face and underparts against grey upperparts.",
+  photoData: "images/sp-whitefacedstormpetrel.jpg" },
+
+"sp-bulwerspetrel": { id: "sp-bulwerspetrel", priority: "★★", name: "Bulwer's Petrel", endemic: false, tripUnique: true, bonus: false,
+  close: "Entirely sooty-brown plumage with a faint pale diagonal wing-bar visible only in good light at close range; long, wedge-shaped tail often held closed.",
+  medium: "Long, slim, all-dark body with a long wedge-shaped tail visible in direct flight.",
+  long: "Buoyant, erratic, low flight just above the water, weaving side to side — quite different from the stiffer, more direct glide of shearwaters.",
+  pelagic: "Often flies low and alone rather than in flocks; the long tail and uniformly dark plumage combined with the weaving flight path are the best cues at range.",
+  similar: "Superficially shearwater-like in silhouette but smaller, slimmer, and longer-tailed, with a far more erratic low flight path.",
+  notes: "Long, slender, wheeling flight low over the water with deep, languid wingbeats. Long wedge-shaped tail and a uniformly dark body, with a pale diagonal bar across the upperwing.",
+  photoData: "images/sp-bulwerspetrel.jpg" },
+
+"sp-puertoricanvireo": { id: "sp-puertoricanvireo", priority: "★★★", name: "Puerto Rican Vireo", endemic: true, tripUnique: true, bonus: false,
+  close: "Plain olive-grey upperparts, pale grayish-white underparts, and a faint pale supercilium; lacks any obvious eye-ring or wing markings.",
+  medium: "Small, plain olive-grey vireo working mid-level forest foliage in pairs; constant low, scolding chatter.",
+  long: "Best located by voice — a harsh, repetitive scolding call from dense forest interior; visually unremarkable and easily overlooked without the call.",
+  pelagic: "",
+  similar: "Plainer and less patterned than other regional vireos; song and habitat (El Yunque forest interior) are the most reliable cues.",
+  notes: "Forest interior; forages methodically through foliage with a persistent, simple repeated song. Plain olive-grey overall, with a pale eye-ring and a stout bill.",
+  photoData: "images/sp-puertoricanvireo.jpg" },
+
+"sp-puertoricanpewee": { id: "sp-puertoricanpewee", priority: "★★★", name: "Puerto Rican Pewee", endemic: true, tripUnique: true, bonus: false,
+  close: "Dark olive-brown upperparts, pale grayish underparts, and a faint pale eye-ring visible at close range; bill broad and flattened, typical of a flycatcher.",
+  medium: "Small, upright flycatcher that sallies out from low, exposed perches and returns to the same spot repeatedly.",
+  long: "Flycatching behavior — short sallies from a fixed low perch — is the best long-range cue in forest clearings and edges.",
+  pelagic: "",
+  similar: "Told from other small flycatchers by its sit-and-sally habit from consistently low perches and its single-island range.",
+  notes: "Forest edge and clearings; sallies out from low, exposed perches to snatch insects and returns to the same spot. Upright posture, dark olive-brown body, and a slightly peaked crown.",
+  photoData: "images/sp-puertoricanpewee.jpg" },
+
+"sp-puertoricantanager": { id: "sp-puertoricantanager", priority: "★★★", name: "Puerto Rican Tanager", endemic: true, tripUnique: true, bonus: false,
+  close: "Dull olive-brown overall with a slightly paler throat and no strong contrasting markings; bill stout and slightly hooked.",
+  medium: "Olive-brown tanager that moves in small, active mixed-species flocks through the mid-canopy.",
+  long: "Best detected by joining mixed foraging flocks moving steadily through forest mid-levels; constant soft chattering calls from the group.",
+  pelagic: "",
+  similar: "Plain coloration makes it easy to overlook in mixed flocks; flock behavior and forest mid-canopy habitat are the most useful cues.",
+  notes: "Mid-canopy forest, foraging actively in small groups through foliage. Plain dark slate-grey body with a noticeably stout, pale bill — plainer than most tanagers.",
+  photoData: "images/sp-puertoricantanager.jpg" },
+
+"sp-antilleancrestedhummingbird": { id: "sp-antilleancrestedhummingbird", priority: "★★", name: "Antillean Crested Hummingbird", endemic: false, tripUnique: true, bonus: false,
+  close: "Male's small forward-curling crest visible on perched birds at close range.",
+  medium: "Tiny hummingbird working flowering shrubs at garden and forest edges; pugnacious, chases other hummingbirds off favored blooms.",
+  long: "Small size and fast, darting flight between flowering shrubs distinguish it from the larger Green-throated Carib sharing the same gardens.",
+  pelagic: "",
+  similar: "Noticeably smaller than Green-throated Carib, with quicker, more direct flight between flowers.",
+  notes: "Garden and forest-edge flowers; feeds with short hovering bouts between blooms. Male's unusual forward-pointing tufted crest is unlike any other hummingbird here.",
+  photoData: "images/sp-antilleancrestedhummingbird.jpg" },
+
+"sp-greenthroatedcarib": { id: "sp-greenthroatedcarib", priority: "★★", name: "Green-throated Carib", endemic: false, tripUnique: true, bonus: false,
+  close: "Iridescent green throat visible only at the right angle in good light on close perched birds.",
+  medium: "Larger and more robust than Antillean Crested Hummingbird, with a slightly decurved bill, often dominating favored flowering shrubs.",
+  long: "Larger size and slower, more deliberate flight compared to the smaller Antillean Crested Hummingbird sharing the same habitat.",
+  pelagic: "",
+  similar: "Larger and bulkier than Antillean Crested Hummingbird; size difference is usually clear even without good light on the throat color.",
+  notes: "Garden and forest-edge flowers, often competing directly with Antillean Crested Hummingbird for the same blooms. Noticeably larger, with a curved bill and an iridescent green throat patch.",
+  photoData: "images/sp-greenthroatedcarib.jpg" },
+
+"sp-ruddyquaildove": { id: "sp-ruddyquaildove", priority: "★", name: "Ruddy Quail-Dove", endemic: false, tripUnique: true, bonus: false,
+  close: "Rich rufous-chestnut body with a pale buff face and a faint dark line below the eye, visible only on a bird standing still in good light.",
+  medium: "Small, rufous-brown dove walking on the forest floor, rarely seen perched in the open.",
+  long: "Far more often heard than seen — a low, mournful repeated cooing from the forest interior; a sudden low, fast flush is the more likely encounter than a clean sighting.",
+  pelagic: "",
+  similar: "Richer rufous tone and forest-floor habit separate it from other regional doves, which favor more open or elevated perches.",
+  notes: "Forest floor and shaded undergrowth; shy and cryptic, usually walking quietly away rather than flushing. Rich rufous-chestnut body with a pale buff face and a faint dark line below the eye.",
+  photoData: "images/sp-ruddyquaildove.jpg" },
+
+"sp-puertoricanowl": { id: "sp-puertoricanowl", priority: "★★★", name: "Puerto Rican Owl", endemic: true, tripUnique: true, bonus: false,
+  close: "Small, stocky owl with no ear tufts, mottled rufous-brown to greyish plumage, and large yellow eyes.",
+  medium: "Strictly nocturnal; spends the day roosting motionless in dense foliage or tree cavities, almost never seen by daylight.",
+  long: "Heard far more often than seen — a descending, tremulous trill is the only realistic detection method on a casual visit; responds well to taped playback in karst forest edge habitat just before dawn.",
+  pelagic: "",
+  similar: "The only owl species resident on Puerto Rico, so any owl call or silhouette heard/seen here is this species — no confusion species present.",
+  notes: "Karst forest edge, dawn and dusk; tape-responsive. First owling attempt this trip — guided pre-dawn session at Río Abajo.",
+  photoData: "images/sp-puertoricanowl.jpg" },
+
+"sp-puertoricaneuphonia": { id: "sp-puertoricaneuphonia", priority: "★★★", name: "Puerto Rican Euphonia", endemic: true, tripUnique: true, bonus: false,
+  close: "Deep blue-black crown, nape, and upperparts contrast with a golden-yellow forehead patch and underparts.",
+  medium: "Small, quiet canopy bird, usually alone or in pairs, closely tied to fruiting mistletoe clumps high in the treetops.",
+  long: "Tiny size and constant high-canopy activity make it easy to miss without scanning fruiting/mistletoe-laden treetops; thin, high-pitched calls are the best long-range cue.",
+  pelagic: "",
+  similar: "The only euphonia species on Puerto Rico — the blue-and-gold combination is unmistakable among the island's small canopy birds once seen well.",
+  notes: "Canopy-dwelling, dependent on mistletoe berries high in the treetops. Documented, recurring Río Abajo target.",
+  photoData: "images/sp-puertoricaneuphonia.jpg" },
+
+"sp-puertoricanbroadwingedhawk": { id: "sp-puertoricanbroadwingedhawk", priority: "★★", name: "Puerto Rican Broad-winged Hawk", endemic: false, tripUnique: true, bonus: false,
+  close: "Dark brown upperparts with finely barred rufous underparts; broad, rounded wings and a relatively short tail.",
+  medium: "Perches inconspicuously inside forest canopy edges; also soars over open karst hillsides near the forest.",
+  long: "Broad, rounded-wing soaring silhouette over forest canopy or karst hills is the best long-range cue — distinguishes it from open-country raptors that favor non-forest habitat.",
+  pelagic: "",
+  similar: "The only resident Buteo on Puerto Rico; migrant North American Broad-winged Hawks pass through the region in numbers on migration, so habitat and date context (resident pair near Río Abajo, not a migrating flock) matter more than plumage alone.",
+  notes: "Distinctive endangered resident subspecies (brunnescens) — Río Abajo and the surrounding karst hills support most of its remaining population. Not given an endemic badge: the full species is widespread across the Americas; only this Caribbean subspecies group is range-restricted.",
+  photoData: "images/sp-puertoricanbroadwingedhawk.jpg" },
+
+"sp-yellowfacedgrassquit": { id: "sp-yellowfacedgrassquit", priority: "★", name: "Yellow-faced Grassquit", endemic: false, tripUnique: true, bonus: false,
+  close: "Male shows a bright yellow face and throat bordered by black on an otherwise olive-grey body; female is plainer and less marked.",
+  medium: "Small finch foraging low in grassy clearings, forest edges, and roadside scrub, often in small loose groups.",
+  long: "Small, dark, sparrow-like shape low in open or scrubby ground cover; the male's yellow face is visible at moderate range in good light.",
+  pelagic: "",
+  similar: "Male separated from other regional grassquits by the bold yellow-and-black facial pattern; female best told by habitat and association with nearby males.",
+  notes: "Common, low-effort pickup in open/edge habitat — incidental only, not worth dedicating guide time to.",
+  photoData: "images/sp-yellowfacedgrassquit.jpg" },
+
+  },
+  sightings: []
+};
+/* ===================== STATE ===================== */
+var state = {
+  data: null,
+  view: "locationList",
+  activeLocationId: null,
+  viewingSpeciesId: null,
+  expandedNotes: {},
+  expandedLocations: {},
+  hideSeenGlobal: false,
+  errorMsg: null
+};
+
+function uid(prefix){ return prefix + "-" + Date.now() + "-" + Math.random().toString(36).slice(2,8); }
+function esc(s){ return (s===undefined||s===null?"":String(s)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function escAttr(s){ return esc(s).replace(/"/g,"&quot;"); }
+
+/* ===================== PERSISTENCE =====================
+   Trips, locations, and species ALWAYS load fresh from SEED_DATA in the
+   code file itself, every time the page opens — so editing the code file
+   is reflected immediately, with no stale-cache override risk.
+   This is a read-only reference app: the ONLY thing that ever changes at
+   runtime is which checkboxes are checked. localStorage is used solely to
+   remember that `sightings` array, so logged sightings persist across
+   sessions on the same computer. */
+var SIGHTINGS_KEY = "birding-tracker-sightings-v1";
+
+function loadSightings(){
+  try{
+    var raw = localStorage.getItem(SIGHTINGS_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return [];
+}
+
+function loadData(){
+  var data = JSON.parse(JSON.stringify(SEED_DATA));
+  data.sightings = loadSightings();
+  return data;
+}
+
+function save(){
+  try{
+    localStorage.setItem(SIGHTINGS_KEY, JSON.stringify(state.data.sightings || []));
+  }catch(e){
+    state.errorMsg = "Could not save your sightings. Your checked boxes may not persist between sessions.";
+  }
+}
+
+/* ===================== DATA HELPERS ===================== */
+
+function getSightingFor(locId, spId) {
+  var list = state.data.sightings || [];
+  return list.find(function(s) { return s.locationId === locId && s.speciesId === spId; });
+}
+
+function getOtherSightingsFor(spId, excludeLocId){
+  var list = state.data.sightings || [];
+  return list.filter(function(s){ return s.speciesId===spId && s.locationId!==excludeLocId; })
+    .map(function(s){ return { s:s, loc: state.data.locations[s.locationId] }; })
+    .filter(function(x){ return !!x.loc; });
+}
+
+function hasAnySighting(spId) {
+  var list = state.data.sightings || [];
+  return list.some(function(s) { return s.speciesId === spId; });
+}
+
+function getLocationNamesForSpecies(spId){
+  return Object.keys(state.data.locations).map(function(k){return state.data.locations[k];})
+    .filter(function(loc){ return loc.speciesIds.indexOf(spId)!==-1; })
+    .map(function(loc){ return loc.name; });
+}
+
+/* priorityValue: turns a "★★★"/"★★"/"★"/"" priority string into a sortable number (3,2,1,0).
+   NOTE: this deliberately reads sp.priority (never the displayed †-prefixed string) — the
+   dagger is rendering-only via priorityDisplay() below, so it can never corrupt this sort. */
+function priorityValue(sp){
+  return sp && sp.priority ? sp.priority.length : 0;
+}
+
+/* priorityDisplay: the visible priority string, with the trip-unique "†" prefix layered on
+   at render time only. tripUnique never pairs with a blank priority (Bonus rows are never
+   trip-unique by definition), but the empty-priority guard is kept defensively anyway. */
+function priorityDisplay(sp){
+  if(!sp || !sp.priority) return "";
+  return (sp.tripUnique ? "†" : "") + sp.priority;
+}
+
+/* speciesNameBadges: returns the small "E" (endemic) / "B" (bonus) markers that belong
+   directly after a species name. Both flags are parsed strictly in the background — there
+   is no UI control for either anywhere in this read-only build; it either renders the
+   badge or it doesn't. Bonus ("B") marks an aspirational/long-shot target kept despite the
+   Vagrancy Filter — it always pairs with a blank priority (no star), per the species file's
+   4-Factor methodology. */
+function speciesNameBadges(sp){
+  var html = "";
+  if(sp.endemic) html += ' <span class="sp-endemic-badge" title="Endemic / near-endemic">E</span>';
+  if(sp.bonus) html += ' <span class="sp-bonus-badge" title="Bonus — aspirational long-shot, no prep tier">B</span>';
+  return html;
+}
+
+/* ===================== APP (read-only: navigation + checklist only) ===================== */
+var App = {};
+
+/* This app is permanently scoped to the single 2027 trip ("trip-1"). The
+   Location List dashboard is the root/home view — there is no multi-trip
+   landing page to navigate back to. */
+App.goLocationList = function(){ state.view="locationList"; state.activeLocationId=null; render(); };
+App.goLocation = function(locId){ state.activeLocationId=locId; state.view="locationDetail"; render(); };
+App.goSpeciesLibrary = function(){ state.view="speciesLibrary"; render(); };
+App.goSpeciesDetail = function(spId){ state.viewingSpeciesId=spId; state.view="speciesDetail"; render(); };
+
+App.toggleHideSeen = function(){ state.hideSeenGlobal = !state.hideSeenGlobal; render(); };
+App.toggleLocationExpand = function(locId){ state.expandedLocations[locId] = !state.expandedLocations[locId]; render(); };
+
+/* logSighting/unlogSighting: tapping the checklist checkbox is the one piece
+   of "data entry" this app still performs in the field — checking a box logs
+   a sighting locally; eBird remains the authoritative external record. */
+App.logSighting = function(locId, spId){
+  if(!state.data.sightings) state.data.sightings = [];
+  state.data.sightings.push({ id:uid("sight"), locationId:locId, speciesId:spId, timestamp:new Date().toISOString() });
+  save(); render();
+};
+App.unlogSighting = function(sightId){
+  state.data.sightings = (state.data.sightings || []).filter(function(s){ return s.id!==sightId; });
+  save(); render();
+};
+
+App.toggleNotes = function(spId){
+  state.expandedNotes[spId] = !state.expandedNotes[spId];
+  render();
+};
+
+/* ===================== RENDER ===================== */
+var ICONS = {
+  chev_down:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>',
+  chev_right:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>',
+  chev_left:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>',
+  check:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>',
+  pin:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+  cal:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  birdSilhouette:'<svg width="38" height="38" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 29c4-10 14-16 24-14 5 1 9 4 11 8-3 0-6 1-8 3 2 2 4 4 4 7-4-2-8-2-11 0-3 5-9 8-15 7-5-1-9-4-11-8 3 0 5-1 7-3-3-1-5-3-7-0z"/><circle cx="29" cy="17" r="1.6" fill="currentColor" stroke="none"/><path d="M15 29c0 4 2 8 6 10" stroke-width="1.6"/></svg>'
+};
+
+/* renderHideSeenToggle: shared sticky "Hide Already Seen Birds" switch used at the
+   top of both the master Species Library and the per-stop field checklist (the
+   "Active Trip" view). A single global flag (state.hideSeenGlobal) drives both, so
+   the filter setting is consistent everywhere it appears. This is a view filter,
+   not a data edit, so it stays interactive in the read-only build. */
+function renderHideSeenToggle(){
+  return '<div class="sticky-filter-bar"><label class="toggle-switch-row"><span>Hide Already Seen Birds</span><span class="toggle-switch"><input type="checkbox" '+(state.hideSeenGlobal?'checked':'')+' onchange="App.toggleHideSeen()"><span class="toggle-slider"></span></span></label></div>';
+}
+
+function render(){
+  var app = document.getElementById("app");
+  var html = '<div class="hero"><h1 onclick="App.goLocationList()" style="cursor:pointer;">Birding ID & Trip Tracker</h1><p>Aspirational species and field ID notes.</p></div>';
+  if(state.errorMsg) html += '<div class="err">'+esc(state.errorMsg)+'</div>';
+  html += renderNav();
+  html += '<div id="viewContent">' + renderViewContent() + '</div>';
+  app.innerHTML = html;
+}
+
+function renderNav(){
+  var tabs = [
+    { key:"locationList", label:"Itinerary", icon:ICONS.pin, on:function(){return state.view==="locationList"||state.view==="locationDetail";} },
+    { key:"speciesLibrary", label:"Targets", icon:'', on:function(){return state.view==="speciesLibrary"||state.view==="speciesDetail";} }
+  ];
+  var fns = { locationList:"App.goLocationList()", speciesLibrary:"App.goSpeciesLibrary()" };
+  var btns = tabs.map(function(t){
+    return '<button class="navbtn '+(t.on()?'active':'')+'" onclick="'+fns[t.key]+'">'+t.icon+esc(t.label)+'</button>';
+  }).join("");
+  return '<div class="nav"><div class="navbtns">'+btns+'</div></div>';
+}
+
+/* App.filterTargets: drives the ONLY text input permitted anywhere in this
+   app — the Species Library search bar. It is a client-side filter over
+   already-rendered rows, not a data edit. */
+App.filterTargets = function() {
+  var query = document.getElementById("targetsSearch").value.toLowerCase();
+  var items = document.querySelectorAll(".library-item");
+  items.forEach(function(item) {
+    var text = item.textContent.toLowerCase();
+    item.style.display = text.includes(query) ? "" : "none";
+  });
+};
+
+function renderViewContent(){
+  switch(state.view){
+    case "locationList": return renderLocationList();
+    case "locationDetail": return renderLocationDetail();
+    case "speciesLibrary": return renderSpeciesLibrary();
+    case "speciesDetail": return renderSpeciesDetail();
+    default: return "";
+  }
+}
+
+/* renderLocationList: the permanent root/home view of the app. Trip 1 (2027) is
+   the only trip this build knows about, so there is no multi-trip landing page —
+   this goes straight to that trip's full stop-by-stop itinerary dashboard. */
+function renderLocationList(){
+  var trip = state.data.trips["trip-1"];
+  var locIds = trip ? trip.locations : Object.keys(state.data.locations);
+  var html = '<div class="row"><h2>Itinerary</h2></div>';
+  html += '<div class="card">';
+  if(locIds.length===0){
+    html += '<p class="empty-msg">No locations in this itinerary.</p>';
+  }
+  locIds.forEach(function(locId){
+    var loc = state.data.locations[locId];
+    if(!loc) return;
+    var realIds = loc.speciesIds.filter(function(sid){ var sp=state.data.species[sid]; return !(sp && sp.bonus); });
+    var seenCount = realIds.filter(function(sid){ return !!getSightingFor(locId,sid); }).length;
+    var allSeen = realIds.length>0 && seenCount===realIds.length;
+    var pillClass = realIds.length===0 ? "count-empty" : (allSeen ? "count-done" : "count-prog");
+    var pillText = realIds.length===0 ? "no list yet" : (seenCount+"/"+realIds.length+" seen");
+    html += '<div class="loc-row" onclick="App.goLocation(\''+locId+'\')"><span class="loc-left"><span class="loc-badge">'+ICONS.pin+'</span><span class="loc-name">'+esc(loc.name)+'</span>'+(loc.date?'<span class="loc-date">'+ICONS.cal+' '+esc(loc.date)+'</span>':'')+'</span><span class="count-pill '+pillClass+'">'+pillText+'</span></div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function renderLocationDetail(){
+  var loc = state.data.locations[state.activeLocationId];
+  if(!loc) return '<p class="empty-msg">Location not found.</p>';
+  var fullList = loc.speciesIds.map(function(id){ return state.data.species[id]; }).filter(Boolean);
+  // Sort by value (priority stars) highest first, so the trip-defining targets surface to the top of the field checklist.
+  fullList.sort(function(a,b){
+    var diff = priorityValue(b) - priorityValue(a);
+    if(diff!==0) return diff;
+    return a.name.localeCompare(b.name);
+  });
+  var totalCount = fullList.length;
+  var realTargetCount = fullList.filter(function(sp){ return !sp.bonus; }).length;
+  var isExpanded = !!state.expandedLocations[loc.id];
+  /* "Cap at 15 Highest-Value Targets": by default only the top 15 by priority are
+     shown for field efficiency, with a toggle link below to expand to the full list.
+     The cap is applied FIRST. The "Hide Already Seen" filter (if on) is applied
+     afterward and simply shrinks whatever remains in view — it does not backfill
+     replacement targets from beyond the cap. */
+  var cappedList = (totalCount > 15 && !isExpanded) ? fullList.slice(0, 15) : fullList;
+  var speciesList = state.hideSeenGlobal ? cappedList.filter(function(sp){ return !hasAnySighting(sp.id); }) : cappedList;
+
+  var html = '<button class="back-link" onclick="App.goLocationList()">'+ICONS.chev_left+' Back to Location List</button>';
+  html += renderHideSeenToggle();
+  html += '<div class="card detail-card"><h2 style="margin:0;">'+esc(loc.name)+'</h2>';
+  if(loc.date) html += '<p style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:4px;margin:0;">'+ICONS.cal+' '+esc(loc.date)+'</p>';
+  if(loc.notes) html += '<p class="loc-notes-display">'+esc(loc.notes)+'</p>';
+  html += '</div>';
+
+  var realSpeciesList = speciesList.filter(function(sp){ return !sp.bonus; });
+  var countLabel = (realSpeciesList.length===realTargetCount) ? String(realTargetCount) : (realSpeciesList.length+' of '+realTargetCount);
+  html += '<h3 style="margin-bottom:12px;">Expected Species ('+countLabel+')</h3>';
+
+  if(totalCount > 15){
+    html += '<button class="btn-link cap-toggle-link" onclick="App.toggleLocationExpand(\''+loc.id+'\')">'+(isExpanded ? 'Show top 15 only' : 'Show all '+totalCount+' species')+'</button>';
+  }
+
+  if(totalCount===0){
+    html += '<p class="empty-msg">No species list for this location.</p>';
+  } else if(speciesList.length===0){
+    html += '<p class="empty-msg">Everything currently in view here is already logged as seen. Turn off "Hide Already Seen Birds" above to see them again.</p>';
+  }
+
+  speciesList.forEach(function(sp){
+    var sighting = getSightingFor(loc.id, sp.id);
+    var others = getOtherSightingsFor(sp.id, loc.id);
+    var hasNotes = !!(sp.close||sp.medium||sp.long||sp.pelagic||sp.similar||sp.photoData);
+    var notesOpen = !!state.expandedNotes[sp.id];
+    html += '<div class="sp-card '+(sighting?'seen':'')+'"><div class="sp-inner">';
+
+    /* Checkbox + tiny photo-thumbnail stack (instruction 6): the thumbnail
+       sits directly beneath the checkbox at the same square width, and is
+       simply omitted (leaving empty space) when there is no photo on file
+       or the photo fails to load. */
+    html += '<div class="chk-stack">';
+    html += '<button class="chk '+(sighting?'on':'')+'" onclick="'+(sighting?"App.unlogSighting('"+sighting.id+"')":"App.logSighting('"+loc.id+"','"+sp.id+"')")+'">'+ICONS.check+'</button>';
+    if(sp.photoData){
+      html += '<div class="chk-thumb"><img src="'+escAttr(sp.photoData)+'" alt="" onerror="this.parentElement.style.display=\'none\'"></div>';
+    }
+    html += '</div>';
+
+    html += '<div style="flex:1;min-width:0;">';
+    html += '<div class="row" style="margin-bottom:0;">';
+    html += '<button class="sp-name-link" onclick="App.goSpeciesDetail(\''+sp.id+'\')"><span>'+esc(sp.name)+speciesNameBadges(sp)+'</span>'+ICONS.chev_right+'</button>';
+    if(sp.priority) html += '<span class="sp-priority" title="'+(sp.tripUnique?'Trip-unique — only realistic shot at this species on the whole trip':'')+'">'+esc(priorityDisplay(sp))+'</span>';
+    html += '</div>';
+    if(sp.notes) html += '<p class="pop-note-standalone">'+esc(sp.notes)+'</p>';
+    if(!sighting && others.length>0){
+      html += '<p class="seen-else">Already seen — also recorded at: '+others.map(function(o){return esc(o.loc.name);}).join(", ")+' ('+new Date(others[0].s.timestamp).toLocaleDateString()+')</p>';
+    }
+    if(sighting){
+      html += '<p class="logged-at">Logged '+new Date(sighting.timestamp).toLocaleString()+'</p>';
+    }
+    if(hasNotes){
+      html += '<button class="idtoggle" onclick="App.toggleNotes(\''+sp.id+'\')">'+(notesOpen?ICONS.chev_down:ICONS.chev_right)+'ID clues</button>';
+      if(notesOpen){
+        html += '<div class="idnotes">';
+        if(sp.close) html += '<p><b>Close:</b> '+esc(sp.close)+'</p>';
+        if(sp.medium) html += '<p><b>Medium:</b> '+esc(sp.medium)+'</p>';
+        if(sp.long) html += '<p><b>Long:</b> '+esc(sp.long)+'</p>';
+        if(sp.pelagic) html += '<p><b>Pelagic:</b> '+esc(sp.pelagic)+'</p>';
+        if(sp.similar) html += '<p class="sim"><b>Similar:</b> '+esc(sp.similar)+'</p>';
+        if(sp.photoData){
+          html += '<div class="idnotes-photo"><img src="'+escAttr(sp.photoData)+'" alt="" onerror="this.parentElement.style.display=\'none\'"></div>';
+        }
+        html += '</div>';
+      }
+    }
+    html += '</div></div></div>';
+  });
+  return html;
+}
+
+function renderSpeciesLibrary(){
+  var all = Object.keys(state.data.species).map(function(k){return state.data.species[k];}).sort(function(a,b){return a.name.localeCompare(b.name);});
+  if(state.hideSeenGlobal) all = all.filter(function(sp){ return !hasAnySighting(sp.id); });
+  var html = renderHideSeenToggle();
+  html += '<div class="row"><h2>Species Library ('+all.length+')</h2></div>';
+  html += '<p style="font-size:12px;color:#64748b;margin:-6px 0 14px;">Your master species reference for this trip — field ID notes for every target, in one place.</p>';
+  html += '<div class="targets-search-wrapper" style="margin-bottom:14px;"><input type="text" id="targetsSearch" placeholder="Search species or locations..." oninput="App.filterTargets()"></div>';
+
+  if(all.length===0){
+    html += '<p class="empty-msg">Everything in your library is already logged as seen. Turn off "Hide Already Seen Birds" above to see it again.</p>';
+  }
+
+  all.forEach(function(sp){
+    var noId = !sp.close && !sp.medium && !sp.long && !sp.pelagic && !sp.similar;
+    var locs = getLocationNamesForSpecies(sp.id);
+    var locText = locs.length ? esc(locs.join(", ")) : "Not yet assigned to a location";
+    var seenBadge = hasAnySighting(sp.id) ? '<span class="lib-seen-badge">Already seen</span>' : '';
+    var priorityBadge = sp.priority ? '<span class="lib-priority" title="'+(sp.tripUnique?'Trip-unique — only realistic shot at this species on the whole trip':'')+'">'+esc(priorityDisplay(sp))+'</span>' : '';
+    var popNote = sp.notes ? '<span class="lib-pop-note">'+esc(sp.notes)+'</span>' : '';
+
+    html += '<div class="sp-lib-row library-item"><button class="lib-name" onclick="App.goSpeciesDetail(\''+sp.id+'\')"><span class="lib-name-row"><span class="lib-name-text">'+esc(sp.name)+speciesNameBadges(sp)+(noId?'<span class="noid">no ID notes yet</span>':'')+seenBadge+'</span>'+priorityBadge+'</span><span class="lib-loc-text">'+locText+'</span>'+popNote+'</button></div>';
+  });
+  return html;
+}
+
+function renderSpeciesDetail(){
+  var sp = state.data.species[state.viewingSpeciesId];
+  if(!sp) return '<p class="empty-msg">Species not found.</p><button class="back-link" onclick="App.goSpeciesLibrary()">'+ICONS.chev_left+' Back to library</button>';
+  var fields = [
+    {k:"close", l:"Close range"},
+    {k:"medium", l:"Medium range"},
+    {k:"long", l:"Long range / silhouette"},
+    {k:"pelagic", l:"Pelagic / flight ID"},
+    {k:"similar", l:"Similar species to watch for"}
+  ];
+  var html = '<button class="back-link" onclick="App.goSpeciesLibrary()">'+ICONS.chev_left+' Back to library</button>';
+  html += '<div class="card detail-card">';
+  html += '<h2 style="margin:0;">'+esc(sp.name)+speciesNameBadges(sp)+'</h2>';
+
+  /* Offline photo architecture: a responsive image frame sits right below the
+     species name header. If photoData resolves to a real image it renders as
+     a photo; if it is missing or fails to load, a premium minimalist
+     placeholder (subtle CSS grid + bird silhouette icon) keeps the layout
+     looking intentional instead of leaving a hole. */
+  if(sp.photoData){
+    html += '<div class="sp-photo-frame"><img class="sp-photo-img" src="'+escAttr(sp.photoData)+'" alt="'+escAttr(sp.name)+' reference photo" onerror="this.parentElement.classList.add(\'is-empty\');this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';"><div class="sp-photo-placeholder" style="display:none;">'+ICONS.birdSilhouette+'<span>No photo yet</span></div></div>';
+  } else {
+    html += '<div class="sp-photo-frame is-empty"><div class="sp-photo-placeholder">'+ICONS.birdSilhouette+'<span>No photo yet</span></div></div>';
+  }
+
+  if(sp.notes) html += '<div class="field-block"><span class="field-label">Population / Where to See</span><p class="field-text">'+esc(sp.notes)+'</p></div>';
+  fields.forEach(function(f){
+    if(sp[f.k]) html += '<div class="field-block"><span class="field-label">'+f.l+'</span><p class="field-text">'+esc(sp[f.k])+'</p></div>';
+  });
+
+  html += '</div>';
+  return html;
+}
+
+/* ===================== INIT ===================== */
+state.data = loadData();
+render();
+</script>
+</body>
+</html>
