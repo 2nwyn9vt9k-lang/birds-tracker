@@ -6,6 +6,9 @@
 <title>Birding ID & Trip Tracker</title>
 <!-- Force the phone to hide all browser chrome and run as a standalone app -->
 <meta name="apple-mobile-web-app-capable" content="yes">
+  <script>
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+</script>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 
