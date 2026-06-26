@@ -6,10 +6,6 @@
 <title>Birding ID & Trip Tracker</title>
 <!-- Force the phone to hide all browser chrome and run as a standalone app -->
 <meta name="apple-mobile-web-app-capable" content="yes">
-  <script>
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
-</script>
-  <link rel="apple-touch-icon" href="icon.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 
@@ -94,8 +90,16 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
   .chk.on{background:var(--em-600);border-color:var(--em-600);}
   .chk svg{display:none;}
   .chk.on svg{display:block;}
-  .chk-thumb{width:38px;height:38px;border-radius:8px;overflow:hidden;flex-shrink:0;}
+  .chk-thumb{width:38px;height:38px;border-radius:8px;overflow:hidden;flex-shrink:0;cursor:pointer;}
   .chk-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+
+  /* ===== Thumbnail photo lightbox =====
+     A simple full-screen overlay drawn on top of whatever screen is
+     currently rendered (it does not change state.view), triggered by
+     tapping a chk-thumb. Tapping anywhere on the dark backdrop closes it
+     and returns to the exact same scroll position underneath. */
+  .lightbox-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.88);display:flex;align-items:center;justify-content:center;z-index:100;padding:24px;box-sizing:border-box;}
+  .lightbox-img{max-width:100%;max-height:100%;border-radius:12px;object-fit:contain;box-shadow:0 12px 40px rgba(0,0,0,.4);}
 
   .sp-name-link{background:none;border:none;padding:0;margin:0;font:inherit;font-weight:700;font-size:14.5px;color:var(--slate-800);cursor:pointer;display:flex;align-items:center;gap:3px;text-align:left;min-width:0;}
   .sp-name-link:hover{color:var(--em-700);}
@@ -1375,7 +1379,8 @@ var state = {
   expandedNotes: {},
   expandedLocations: {},
   hideSeenGlobal: false,
-  errorMsg: null
+  errorMsg: null,
+  lightboxPhoto: null
 };
 
 function uid(prefix){ return prefix + "-" + Date.now() + "-" + Math.random().toString(36).slice(2,8); }
@@ -1499,6 +1504,14 @@ App.toggleNotes = function(spId){
   render();
 };
 
+/* openLightbox/closeLightbox: tapping the small checklist thumbnail pops the
+   same photo up full-size as an overlay on top of whatever screen is
+   currently showing. This never touches state.view, so closing it (tap
+   backdrop) leaves you exactly where you were — same scroll position, same
+   list, nothing re-navigated. */
+App.openLightbox = function(url){ state.lightboxPhoto = url; render(); };
+App.closeLightbox = function(){ state.lightboxPhoto = null; render(); };
+
 /* ===================== RENDER ===================== */
 var ICONS = {
   chev_down:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>',
@@ -1525,6 +1538,9 @@ function render(){
   if(state.errorMsg) html += '<div class="err">'+esc(state.errorMsg)+'</div>';
   html += renderNav();
   html += '<div id="viewContent">' + renderViewContent() + '</div>';
+  if(state.lightboxPhoto){
+    html += '<div class="lightbox-backdrop" onclick="App.closeLightbox()"><img class="lightbox-img" src="'+escAttr(state.lightboxPhoto)+'" alt=""></div>';
+  }
   app.innerHTML = html;
 }
 
@@ -1643,7 +1659,7 @@ function renderLocationDetail(){
     html += '<div class="chk-stack">';
     html += '<button class="chk '+(sighting?'on':'')+'" onclick="'+(sighting?"App.unlogSighting('"+sighting.id+"')":"App.logSighting('"+loc.id+"','"+sp.id+"')")+'">'+ICONS.check+'</button>';
     if(sp.photoData){
-      html += '<div class="chk-thumb"><img src="'+escAttr(sp.photoData)+'" alt="" onerror="this.parentElement.style.display=\'none\'"></div>';
+      html += '<div class="chk-thumb"><img src="'+escAttr(sp.photoData)+'" alt="" onclick="App.openLightbox(\''+escAttr(sp.photoData)+'\')" onerror="this.parentElement.style.display=\'none\'"></div>';
     }
     html += '</div>';
 
