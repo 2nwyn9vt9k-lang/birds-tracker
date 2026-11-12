@@ -1,4 +1,4 @@
-const CACHE = 'bird-tracker-v35';
+const CACHE = 'bird-tracker-v36';
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./index.html'])));
 });
