@@ -372,16 +372,16 @@ var SEED_DATA = {
     "loc-atsea": {
       id: "loc-atsea",
       tripId: "trip-1",
-      name: "At Sea — Atlantic Crossing (Nov 20–26, 2027 · Cruise Days 8–14)",
-      date: "2027-11-20",
-      notes: "Ship observation deck, self-guided. November is peak migration window for pelagic shearwaters, storm-petrels, and skuas along this Atlantic corridor — scan dawn/dusk for highest diversity.",
+      name: "At Sea — Atlantic Crossing",
+      date: "2027-11-20 – 2027-11-26",
+      notes: "Cruise Days 8–14 of the Atlantic crossing. Ship observation deck, self-guided. November is peak migration window for pelagic shearwaters, storm-petrels, and skuas along this Atlantic corridor — scan dawn/dusk for highest diversity.",
       speciesIds: ["sp-blackcappedpetrel", "sp-greatshearwater", "sp-capeverdeshearwater", "sp-corysshearwater", "sp-baroloshearwater", "sp-feaspetrel", "sp-madeiranstormpetrel", "sp-whitefacedstormpetrel", "sp-greatskua", "sp-europeanstormpetrel", "sp-bulwerspetrel", "sp-sabinesgull", "sp-pomarineskua", "sp-longtailedskua", "sp-greyphalarope"]
     },
     "loc-sanjuan": {
       id: "loc-sanjuan",
       tripId: "trip-1",
-      name: "San Juan, Puerto Rico (Nov 27–28, 2027)",
-      date: "2027-11-27",
+      name: "San Juan, Puerto Rico",
+      date: "2027-11-27 – 2027-11-28",
       notes: "El Yunque National Forest, self-guided PM Nov 27 — El Portal boardwalk first, then Yokahú Tower (best vantage above the canopy), then slow roadside stops along PR-191, with Mt. Britton as a possible 4th stop if time allows (also where the Elfin-woods Warbler record came from). Big Tree Trail/La Mina Trail/Baño de Oro Trail closed indefinitely since 2024, re-verify closer to travel date. Río Abajo, guided half-day AM Nov 28 — same guide as the Nov 2025 trip, pre-dawn pickup for an owl attempt.",
       speciesIds: ["sp-puertoricanwoodpecker", "sp-puertoricanowl", "sp-puertoricaneuphonia", "sp-puertoricanoriole", "sp-puertoricanvireo", "sp-puertoricantanager", "sp-puertoricanpewee", "sp-puertoricanbroadwingedhawk", "sp-antilleancrestedhummingbird", "sp-greenthroatedcarib", "sp-pearlyeyedthrasher", "sp-keywestquaildove", "sp-ruddyquaildove", "sp-puertoricanparrot", "sp-elfinwoodswarbler"]
     }
@@ -1621,7 +1621,7 @@ function renderHideSeenToggle(){
 
 function render(){
   var app = document.getElementById("app");
-  var html = '<div class="hero"><h1 onclick="App.goLocationList()" style="cursor:pointer;">Birding ID & Trip Tracker</h1><p>'+esc(APP_VERSION)+'</p></div>';
+  var html = '<div class="hero"><h1 onclick="App.goLocationList()" style="cursor:pointer;">Birding ID & Trip Tracker</h1></div>';
   if(state.errorMsg) html += '<div class="err">'+esc(state.errorMsg)+'</div>';
   html += renderNav();
   html += '<div id="viewContent">' + renderViewContent() + '</div>';
@@ -1687,6 +1687,7 @@ function renderLocationList(){
     html += '<div class="loc-row" onclick="App.goLocation(\''+locId+'\')"><span class="loc-left"><span class="loc-badge">'+ICONS.pin+'</span><span class="loc-name">'+esc(loc.name)+'</span>'+(loc.date?'<span class="loc-date">'+ICONS.cal+' '+esc(loc.date)+'</span>':'')+'</span><span class="count-pill '+pillClass+'">'+pillText+'</span></div>';
   });
   html += '</div>';
+  html += '<p style="font-size:11px;color:#94a3b8;text-align:center;margin:10px 0 0;">'+esc(APP_VERSION)+'</p>';
   return html;
 }
 
